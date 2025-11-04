@@ -1,33 +1,33 @@
 # -*- coding: utf-8 -*-
-# FastAPI: PDF -> TXT + JPG (performans optimize)
-from fastapi import FastAPI, UploadFile, File, Request
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+# FastAPI app: PDF -> (TXT + JPG)  +  Images -> PDF
+
+from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from typing import List, Dict, Any
 from pathlib import Path
+from io import BytesIO
 import tempfile, shutil, os
 
-APP_TITLE = "PDF Scanner (TXT + JPG)"
-
-# ---- Ayarlar ----
-ENABLE_OCR_AUTO = True      # metin yoksa OCR dene
-OCR_LANG = "ara+eng+tur"
-POPPLER_PATH = None         # örn: r"C:\poppler\Library\bin"
-OCR_DPI = 150               # bellek dostu DPI
-OCR_MAX_PAGES = 300         # çok büyük dosyalarda sınır
-JPG_QUALITY = 80            # çıktı görselleri kalite
-MAX_UPLOAD_MB = 200         # istersen arttır/azalt
-
+# ====== App meta ======
+APP_TITLE = "PDF Scanner (TXT + JPG) + Images→PDF"
 app = FastAPI(title=APP_TITLE)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+# ====== Settings ======
+ENABLE_OCR_AUTO = True          # لا يوجد نص؟ جرّب OCR
+OCR_LANG = "ara+eng+tur"
+POPPLER_PATH = None             # مثال: r"C:\poppler\Library\bin"
+OCR_DPI = 150
+OCR_MAX_PAGES = 300
+JPG_QUALITY = 80
+MAX_UPLOAD_MB = 200
 
-# ---------- Yardımcılar ----------
+# ---------- Helpers ----------
 def mb(size_bytes: int) -> float:
     return size_bytes / (1024 * 1024)
 
-
-# ---------- Metin (pdfplumber) ----------
+# ---------- Text (pdfplumber) ----------
 def extract_text_normal(pdf_path: Path) -> str:
     import pdfplumber
     text_parts = []
@@ -41,8 +41,7 @@ def extract_text_normal(pdf_path: Path) -> str:
         print("[!] pdfplumber error:", e)
     return ("\n".join(text_parts)).strip()
 
-
-# ---------- Metin (OCR – akışlı, sayfa sayfa) ----------
+# ---------- OCR (stream page-by-page) ----------
 def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
     try:
         from pdf2image import convert_from_path
@@ -54,7 +53,6 @@ def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
 
         text_parts = []
         with tempfile.TemporaryDirectory() as tmp:
-            # paths_only=True => belleğe resim objesi yerine dosya yolu döner
             paths = convert_from_path(
                 str(pdf_path),
                 dpi=dpi,
@@ -62,12 +60,13 @@ def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
                 output_folder=tmp,
                 paths_only=True,
                 thread_count=1,
+                **kwargs
             )
 
             if max_pages and len(paths) > max_pages:
                 paths = paths[:max_pages]
 
-            for i, img_path in enumerate(paths, 1):
+            for img_path in paths:
                 page_text = pytesseract.image_to_string(img_path, lang=OCR_LANG)
                 text_parts.append(page_text)
                 try:
@@ -81,8 +80,7 @@ def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
         print("[!] OCR failed (stream):", e)
         return ""
 
-
-# ---------- Gömülü görselleri JPG (sıkıştırmalı) ----------
+# ---------- Embedded images -> JPG ----------
 def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
     try:
         import fitz  # PyMuPDF
@@ -98,7 +96,7 @@ def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
             for img_i, info in enumerate(page.get_images(full=True), 1):
                 xref = info[0]
                 pix = fitz.Pixmap(doc, xref)
-                # RGB'ye çevir (alpha/CMYK varsa)
+                # convert to RGB if needed (alpha/CMYK)
                 if pix.alpha or (pix.colorspace and getattr(pix.colorspace, "n", 3) != 3):
                     pix = fitz.Pixmap(fitz.csRGB, pix)
                 (out_dir / f"page{p_i+1}_img{img_i}.jpg").write_bytes(
@@ -107,14 +105,14 @@ def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
                 n += 1
     return n
 
+# ================= Routes =================
 
-# ---------- Sayfa: Yükleme ----------
+# ---- Index (رفع PDF) ----
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "title": APP_TITLE})
 
-
-# ---------- Upload & İşleme ----------
+# ---- Upload PDFs -> (TXT + JPGs) ----
 @app.post("/upload", response_class=HTMLResponse)
 async def upload(request: Request, files: List[UploadFile] = File(...)):
     tmpdir = Path(tempfile.mkdtemp())
@@ -128,7 +126,7 @@ async def upload(request: Request, files: List[UploadFile] = File(...)):
             results.append({"input": f.filename, "error": "Sadece PDF kabul edilir."})
             continue
 
-        # PDF'i diske yaz
+        # save PDF to disk
         original_path = tmpdir / f.filename
         with open(original_path, "wb") as w:
             shutil.copyfileobj(f.file, w)
@@ -141,21 +139,20 @@ async def upload(request: Request, files: List[UploadFile] = File(...)):
             })
             continue
 
-        # 1) Metin -> .txt
+        # 1) text -> .txt
         text = extract_text_normal(original_path)
         if ENABLE_OCR_AUTO and (not text or len(text) < 50):
             print("[i] Low text; trying OCR…")
-            ocr_text = extract_text_ocr(original_path, dpi=OCR_DPI, max_pages=OCR_MAX_PAGES)
-            text = ocr_text or text
+            text = extract_text_ocr(original_path, dpi=OCR_DPI, max_pages=OCR_MAX_PAGES) or text
 
         txt_path = outdir / (Path(f.filename).stem + ".txt")
         txt_path.write_text(text or "", encoding="utf-8")
 
-        # 2) Görseller -> .jpg
+        # 2) images -> .jpg
         imgs_dir = outdir / (Path(f.filename).stem + "_images")
         count = extract_images_jpg(original_path, imgs_dir, quality=JPG_QUALITY)
 
-        # Linkler
+        # links
         txt_link = f"/tmp/{tmpdir.name}/out/{txt_path.name}"
         img_links = []
         if imgs_dir.exists():
@@ -174,15 +171,51 @@ async def upload(request: Request, files: List[UploadFile] = File(...)):
         {"request": request, "title": APP_TITLE, "results": results}
     )
 
-
-# ---------- Geçici dosyaları servis et ----------
+# ---- serve temp files ----
 @app.get("/tmp/{tmpid}/out/{path:path}")
 def serve_tmp(tmpid: str, path: str):
     base = Path(tempfile.gettempdir()) / tmpid / "out"
     target = (base / Path(path)).resolve()
-    # path traversal engeli
     if not str(target).startswith(str(base.resolve())):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     if target.exists() and target.is_file():
         return FileResponse(str(target), media_type="application/octet-stream", filename=target.name)
     return JSONResponse({"error": "file not found"}, status_code=404)
+
+# ---- UI: Images -> PDF ----
+@app.get("/convert/images", response_class=HTMLResponse)
+def convert_images_page(request: Request):
+    return templates.TemplateResponse("convert_images.html", {"request": request})
+
+# ---- API: Images -> single PDF ----
+@app.post("/api/convert/images-to-pdf")
+async def images_to_pdf(
+    images: List[UploadFile] = File(...),
+    outfile: str = Form("images.pdf")
+):
+    from PIL import Image  # Pillow
+
+    if not images:
+        return {"error": "لم تُرسل أي صور."}
+
+    pil_images = []
+    for f in images:
+        if not (f.content_type or "").startswith("image/"):
+            return {"error": f"الملف {f.filename} ليس صورة."}
+        data = await f.read()
+        img = Image.open(BytesIO(data))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGB")
+        elif img.mode == "L":
+            img = img.convert("RGB")
+        pil_images.append(img)
+
+    pdf_bytes = BytesIO()
+    first, rest = pil_images[0], pil_images[1:]
+    first.save(pdf_bytes, format="PDF", save_all=True, append_images=rest)
+    pdf_bytes.seek(0)
+
+    if not outfile.lower().endswith(".pdf"):
+        outfile += ".pdf"
+    headers = {"Content-Disposition": f'attachment; filename="{outfile}"'}
+    return StreamingResponse(pdf_bytes, media_type="application/pdf", headers=headers)

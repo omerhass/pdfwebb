@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>تحويل صور إلى PDF</title>
+  <style>
+    body{font-family:system-ui;max-width:720px;margin:30px auto}
+    .card{border:1px solid #ddd;border-radius:10px;padding:18px}
+    .row{margin:12px 0}
+    button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h2>تحويل صور إلى PDF</h2>
+  <div class="card">
+    <form action="/api/convert/images-to-pdf" method="post" enctype="multipart/form-data">
+      <div class="row">
+        <label>اختر الصور (يمكنك اختيار عدة صور):</label><br>
+        <input type="file" name="images" accept="image/*" multiple required />
+      </div>
+      <div class="row">
+        <label>اسم ملف الـ PDF الناتج:</label><br>
+        <input type="text" name="outfile" value="images.pdf" required />
+      </div>
+      <button type="submit">حوِّل الآن</button>
+    </form>
+  </div>
+</body>
+</html>
