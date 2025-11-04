@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0d12; --card:#111827; --muted:#9aa3b2; --text:#e5e7eb; --pri:#4f46e5; --pri-h:#4338ca; --ok:#22c55e; --warn:#f59e0b; --bd:#1f2937;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f7f7fb; --card:#ffffff; --muted:#6b7280; --text:#111827; --pri:#4f46e5; --pri-h:#4338ca; --ok:#16a34a; --warn:#d97706; --bd:#e5e7eb; }
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Cairo",system-ui,Segoe UI,Arial;background:var(--bg);color:var(--text);}
+    .wrap{max-width:940px;margin:40px auto;padding:0 16px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    h1{font-size:28px;margin:0;font-weight:700;letter-spacing:.2px}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:22px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+    .row{display:flex;gap:14px;align-items:center}
+    .btn{background:var(--pri);color:#fff;border:none;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn:hover{background:var(--pri-h)}
+    .muted{color:var(--muted);font-size:14px}
+    .drop{border:2px dashed var(--bd);border-radius:16px;padding:28px;text-align:center;transition:.2s}
+    .drop.drag{border-color:var(--pri);background:rgba(79,70,229,.06)}
+    .filelist{margin:12px 0 0 0;padding:0;list-style:none;display:grid;gap:8px}
+    .file{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px dashed var(--bd);border-radius:12px;padding:8px 12px}
+    .pill{font-size:12px;color:#fff;background:var(--pri);padding:2px 8px;border-radius:999px}
+    .progress{height:8px;background:var(--bd);border-radius:999px;overflow:hidden;margin-top:12px;display:none}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--pri),#06b6d4);transition:width .2s}
+    footer{margin-top:18px;display:flex;gap:10px;align-items:center}
+    .switch{cursor:pointer;user-select:none;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>PDF Scanner — استخراج نص (TXT) وصور (JPG)</h1>
+      <div class="muted">الوضع: <span id="themeLbl">داكن</span> • <span class="switch" id="toggleTheme">بدّل</span></div>
+    </header>
+
+    <div class="card">
+      <form id="form" action="/upload" method="post" enctype="multipart/form-data">
+        <div id="drop" class="drop">
+          <input id="file" name="files" type="file" accept="application/pdf" multiple style="display:none" />
+          <h3 style="margin:0 0 4px 0">اسحب ملفات PDF هنا أو اضغط للاختيار</h3>
+          <div class="muted">يمكن رفع عدة ملفات دفعة واحدة</div>
+        </div>
+
+        <ul id="filelist" class="filelist"></ul>
+
+        <div class="progress" id="prog"><div class="bar" id="bar"></div></div>
+
+        <footer>
+          <button class="btn" type="submit">بدء المعالجة</button>
+          <span class="muted" id="countLbl">لم تُحدد ملفات بعد</span>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+<script>
+  const fileInput = document.getElementById('file');
+  const drop = document.getElementById('drop');
+  const list = document.getElementById('filelist');
+  const countLbl = document.getElementById('countLbl');
+  const form = document.getElementById('form');
+  const prog = document.getElementById('prog');
+  const bar = document.getElementById('bar');
+  const themeLbl = document.getElementById('themeLbl');
+  const toggleTheme = document.getElementById('toggleTheme');
+
+  // theme toggle
+  let dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  themeLbl.textContent = dark ? 'داكن' : 'فاتح';
+  toggleTheme.onclick = () => {
+    dark = !dark;
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    themeLbl.textContent = dark ? 'داكن' : 'فاتح';
+  };
+
+  drop.onclick = () => fileInput.click();
+
+  const renderList = (files) => {
+    list.innerHTML = '';
+    [...files].forEach(f=>{
+      const li = document.createElement('li');
+      li.className='file';
+      li.innerHTML = `<span>${f.name}</span><span class="pill">${(f.size/1048576).toFixed(2)} MB</span>`;
+      list.appendChild(li);
+    });
+    countLbl.textContent = files.length ? `${files.length} ملف/ملفات محددة` : 'لم تُحدد ملفات بعد';
+  };
+
+  ;['dragenter','dragover'].forEach(ev=>{
+    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); });
+  });
+  ;['dragleave','drop'].forEach(ev=>{
+    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); });
+  });
+  drop.addEventListener('drop', e=>{
+    fileInput.files = e.dataTransfer.files;
+    renderList(fileInput.files);
+  });
+  fileInput.addEventListener('change', ()=> renderList(fileInput.files));
+
+  // progress (client-side visual only)
+  form.addEventListener('submit', ()=>{
+    prog.style.display='block';
+    let pct = 10;
+    const id = setInterval(()=>{
+      pct = Math.min(95, pct+3);
+      bar.style.width = pct + '%';
+    }, 120);
+    window.__barInterval = id;
+  });
+</script>
+</body>
+</html>
