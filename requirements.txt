@@ -1,9 +1,5 @@
 fastapi
 uvicorn
-pdfplumber
-pdf2image
-pytesseract
 python-multipart
-jinja2
 Pillow
-PyMuPDF
+jinja2
