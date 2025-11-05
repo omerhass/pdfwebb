@@ -7,7 +7,9 @@ from fastapi.templating import Jinja2Templates
 from typing import List, Dict, Any
 from pathlib import Path
 from io import BytesIO
-import tempfile, shutil, os
+from zipfile import ZipFile, ZIP_DEFLATED
+from PIL import Image
+import tempfile, shutil, os, time
 
 # ====== App meta ======
 APP_TITLE = "PDF Scanner (TXT + JPG) + Images→PDF"
@@ -105,6 +107,32 @@ def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
                 n += 1
     return n
 
+# ---- مساعد: تركيب الصورة على صفحة A4 اختيارياً ----
+def to_a4(img: Image.Image, dpi: int = 300, margin_mm: int = 8) -> Image.Image:
+    # صفحة A4 بالبكسل عند 300dpi
+    a4_w, a4_h = int(8.27 * dpi), int(11.69 * dpi)
+    bg = Image.new("RGB", (a4_w, a4_h), "white")
+    # حواف بالميليمتر
+    margin_px = int((margin_mm / 25.4) * dpi)
+    max_w, max_h = a4_w - 2 * margin_px, a4_h - 2 * margin_px
+
+    # تأكد من RGB
+    if img.mode in ("RGBA", "LA", "P"):
+        img = img.convert("RGB")
+    elif img.mode == "L":
+        img = img.convert("RGB")
+
+    # تحجيم يناسب داخل A4
+    ratio = min(max_w / img.width, max_h / img.height)
+    new_size = (max(1, int(img.width * ratio)), max(1, int(img.height * ratio)))
+    img_resized = img.resize(new_size, Image.LANCZOS)
+
+    # لصق في المنتصف
+    x = margin_px + (max_w - img_resized.width) // 2
+    y = margin_px + (max_h - img_resized.height) // 2
+    bg.paste(img_resized, (x, y))
+    return bg
+
 # ================= Routes =================
 
 # ---- Index (رفع PDF) ----
@@ -187,35 +215,72 @@ def serve_tmp(tmpid: str, path: str):
 def convert_images_page(request: Request):
     return templates.TemplateResponse("convert_images.html", {"request": request})
 
-# ---- API: Images -> single PDF ----
-@app.post("/api/convert/images-to-pdf")
+# ---- API: Images -> PDF (دمج أو ملف لكل صورة + خيار A4) ----
+@app.post("/api/images-to-pdf")
 async def images_to_pdf(
     images: List[UploadFile] = File(...),
-    outfile: str = Form("images.pdf")
+    outfile: str = Form("images.pdf"),
+    order: str = Form("name"),     # name | mtime | as_is
+    per_file: str = Form(None),    # "1" => كل صورة ملف PDF مستقل
+    fit_a4: str = Form(None)       # "1" => ضبط على صفحة A4
 ):
-    from PIL import Image  # Pillow
-
     if not images:
-        return {"error": "لم تُرسل أي صور."}
+        return JSONResponse({"error": "لم تُرسل أي صور."}, status_code=400)
 
-    pil_images = []
+    # ترتيب الملفات
+    if order == "name":
+        images.sort(key=lambda f: (f.filename or "").lower())
+    elif order == "mtime":
+        # best effort (قد لا تتوفر mtime من المتصفح)
+        images.sort(key=lambda f: getattr(getattr(f, "spooled", None), "mtime", time.time()))
+
+    # قراءة وتحويل
+    pil_list: List[Image.Image] = []
+    single_pdfs = []  # (name, bytes)
+
     for f in images:
         if not (f.content_type or "").startswith("image/"):
-            return {"error": f"الملف {f.filename} ليس صورة."}
+            return JSONResponse({"error": f"الملف {f.filename} ليس صورة."}, status_code=400)
+
         data = await f.read()
         img = Image.open(BytesIO(data))
+        # إصلاح الأنماط
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGB")
         elif img.mode == "L":
             img = img.convert("RGB")
-        pil_images.append(img)
 
-    pdf_bytes = BytesIO()
-    first, rest = pil_images[0], pil_images[1:]
-    first.save(pdf_bytes, format="PDF", save_all=True, append_images=rest)
-    pdf_bytes.seek(0)
+        if fit_a4 == "1":
+            img = to_a4(img, dpi=300)
 
-    if not outfile.lower().endswith(".pdf"):
-        outfile += ".pdf"
-    headers = {"Content-Disposition": f'attachment; filename="{outfile}"'}
-    return StreamingResponse(pdf_bytes, media_type="application/pdf", headers=headers)
+        if per_file == "1":
+            # PDF لكل صورة
+            buf = BytesIO()
+            img.save(buf, format="PDF")
+            buf.seek(0)
+            name = (f.filename or "image").rsplit(".", 1)[0] + ".pdf"
+            single_pdfs.append((name, buf.read()))
+        else:
+            pil_list.append(img)
+
+    # إرجاع حسب الخيار
+    if per_file == "1":
+        # ZIP يحتوي على كل ملفات الـPDF
+        zip_bytes = BytesIO()
+        with ZipFile(zip_bytes, "w", ZIP_DEFLATED) as zf:
+            for name, blob in single_pdfs:
+                zf.writestr(name, blob)
+        zip_bytes.seek(0)
+        headers = {"Content-Disposition": 'attachment; filename="images_pdf.zip"'}
+        return StreamingResponse(zip_bytes, media_type="application/zip", headers=headers)
+    else:
+        if not pil_list:
+            return JSONResponse({"error": "لا توجد صور صالحة للدمج."}, status_code=400)
+        pdf_bytes = BytesIO()
+        first, rest = pil_list[0], pil_list[1:]
+        first.save(pdf_bytes, format="PDF", save_all=True, append_images=rest)
+        pdf_bytes.seek(0)
+        if not outfile.lower().endswith(".pdf"):
+            outfile += ".pdf"
+        headers = {"Content-Disposition": f'attachment; filename="{outfile}"'}
+        return StreamingResponse(pdf_bytes, media_type="application/pdf", headers=headers)

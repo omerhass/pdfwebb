@@ -2,28 +2,87 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>تحويل صور إلى PDF</title>
+
   <style>
-    body{font-family:system-ui;max-width:720px;margin:30px auto}
-    .card{border:1px solid #ddd;border-radius:10px;padding:18px}
-    .row{margin:12px 0}
-    button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}
+    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#0b0d12;color:#e5e7eb}
+    .wrap{max-width:860px;margin:32px auto;padding:0 16px}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:20px}
+    label{display:block;margin:10px 0 6px}
+    input[type="text"],select{
+      width:100%;padding:10px;border-radius:10px;border:1px solid #374151;
+      background:#0b0f18;color:#e5e7eb
+    }
+    input[type="file"]{margin-top:8px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{
+      background:#4f46e5;border:0;color:#fff;padding:10px 16px;border-radius:10px;
+      cursor:pointer;font-weight:600;text-decoration:none;display:inline-block
+    }
+    .btn:hover{background:#4338ca}
+    .muted{color:#9aa3b2;font-size:14px}
+    a.btn{text-decoration:none}
   </style>
 </head>
+
 <body>
+<div class="wrap">
+
   <h2>تحويل صور إلى PDF</h2>
+
   <div class="card">
-    <form action="/api/convert/images-to-pdf" method="post" enctype="multipart/form-data">
+    <form action="/api/images-to-pdf" method="post" enctype="multipart/form-data">
+
+      <!-- اختيار الصور -->
+      <label>اختر الصور (JPG/PNG/WebP/...):</label>
+      <input type="file" name="images" accept="image/*" multiple required>
+
+      <!-- اسم PDF -->
       <div class="row">
-        <label>اختر الصور (يمكنك اختيار عدة صور):</label><br>
-        <input type="file" name="images" accept="image/*" multiple required />
+        <div style="flex:1 1 240px">
+          <label>اسم ملف الـPDF الناتج (عند الدمج):</label>
+          <input type="text" name="outfile" value="images.pdf">
+        </div>
+
+        <div style="flex:1 1 200px">
+          <label>الترتيب:</label>
+          <select name="order">
+            <option value="name">حسب الاسم (تصاعدي)</option>
+            <option value="mtime">حسب تاريخ التعديل</option>
+            <option value="as_is">كما تم اختيارها</option>
+          </select>
+        </div>
       </div>
+
+      <!-- PDF لكل صورة -->
       <div class="row">
-        <label>اسم ملف الـ PDF الناتج:</label><br>
-        <input type="text" name="outfile" value="images.pdf" required />
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" name="per_file" value="1">
+          إنشاء ملف PDF لكل صورة (بدلاً من دمجها في ملف واحد)
+        </label>
       </div>
-      <button type="submit">حوِّل الآن</button>
+
+      <!-- ضبط على A4 -->
+      <div class="row">
+        <div>
+          <label style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" name="fit_a4" value="1">
+            ضبط كل صورة على صفحة A4 (مع هوامش طفيفة)
+          </label>
+          <div class="muted">مفيد لو كانت الصور بأبعاد مختلفة.</div>
+        </div>
+      </div>
+
+      <!-- أزرار التحكم -->
+      <div style="margin-top:14px">
+        <button class="btn" type="submit">حوّل الآن</button>
+        <a class="btn" href="/">رجوع للصفحة الرئيسية</a>
+      </div>
+
     </form>
   </div>
+
+</div>
 </body>
 </html>
