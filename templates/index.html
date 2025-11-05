@@ -1,131 +1,109 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{{ title }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#0b0d12; --card:#111827; --muted:#9aa3b2; --text:#e5e7eb; --pri:#4f46e5; --pri-h:#4338ca; --ok:#22c55e; --warn:#f59e0b; --bd:#1f2937;
-    }
-    @media (prefers-color-scheme: light){
-      :root{ --bg:#f7f7fb; --card:#ffffff; --muted:#6b7280; --text:#111827; --pri:#4f46e5; --pri-h:#4338ca; --ok:#16a34a; --warn:#d97706; --bd:#e5e7eb; }
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:"Cairo",system-ui,Segoe UI,Arial;background:var(--bg);color:var(--text);}
-    .wrap{max-width:940px;margin:40px auto;padding:0 16px}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-    h1{font-size:28px;margin:0;font-weight:700;letter-spacing:.2px}
-    .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:22px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
-    .row{display:flex;gap:14px;align-items:center}
-    .btn{background:var(--pri);color:#fff;border:none;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600;text-decoration:none;display:inline-block}
-    .btn:hover{background:var(--pri-h)}
-    .muted{color:var(--muted);font-size:14px}
-    .drop{border:2px dashed var(--bd);border-radius:16px;padding:28px;text-align:center;transition:.2s}
-    .drop.drag{border-color:var(--pri);background:rgba(79,70,229,.06)}
-    .filelist{margin:12px 0 0 0;padding:0;list-style:none;display:grid;gap:8px}
-    .file{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px dashed var(--bd);border-radius:12px;padding:8px 12px}
-    .pill{font-size:12px;color:#fff;background:var(--pri);padding:2px 8px;border-radius:999px}
-    .progress{height:8px;background:var(--bd);border-radius:999px;overflow:hidden;margin-top:12px;display:none}
-    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--pri),#06b6d4);transition:width .2s}
-    footer{margin-top:18px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .switch{cursor:pointer;user-select:none;font-size:14px}
-    .links{display:flex;gap:10px;align-items:center}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>PDF Scanner — استخراج نص (TXT) وصور (JPG)</h1>
-      <div class="links">
-        <!-- زر التحويل: صور ➜ PDF -->
-        <a class="btn" href="/convert/images">تحويل صور إلى PDF</a>
-        <div class="muted">الوضع: <span id="themeLbl">داكن</span> • <span class="switch" id="toggleTheme">بدّل</span></div>
-      </div>
-    </header>
+{% extends "base.html" %}
+{% set active = 'home' %}
 
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>PDF إلى نص (TXT) وصور (JPG)</h1>
+    <p>حوّل ملفات PDF إلى نص قابل للنسخ واستخرج الصور المضمّنة بسهولة.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
     <div class="card">
-      <form id="form" action="/upload" method="post" enctype="multipart/form-data">
-        <div id="drop" class="drop">
-          <input id="file" name="files" type="file" accept="application/pdf" multiple style="display:none" />
-          <h3 style="margin:0 0 4px 0">اسحب ملفات PDF هنا أو اضغط للاختيار</h3>
-          <div class="muted">يمكن رفع عدة ملفات دفعة واحدة</div>
+      <form id="form" action="/upload" method="post" enctype="multipart/form-data" class="center" style="flex-direction:column;gap:12px">
+        <!-- مُدخل الملفات الفعلي -->
+        <input id="file" name="files" type="file" accept="application/pdf" multiple hidden />
+
+        <!-- زر اختيار الملف على طريقة iLovePDF -->
+        <div style="text-align:center">
+          <button type="button" id="pick" class="btn" style="font-size:18px">اختر ملفات PDF</button>
+          <div class="sub">أو اسحبها هنا</div>
         </div>
 
-        <ul id="filelist" class="filelist"></ul>
+        <!-- منطقة السحب والإفلات -->
+        <div id="drop" class="drop" style="max-width:720px">اسحب ملفات PDF هنا</div>
 
-        <div class="progress" id="prog"><div class="bar" id="bar"></div></div>
+        <!-- قائمة الملفات المختارة -->
+        <ul id="filelist" style="list-style:none;padding:0;margin:10px 0;max-width:720px;width:100%"></ul>
 
-        <footer>
-          <div class="row">
-            <button class="btn" type="submit">بدء المعالجة</button>
-            <span class="muted" id="countLbl">لم تُحدد ملفات بعد</span>
-          </div>
-          <!-- رابط إضافي أسفل الفورم -->
-          <a class="btn" href="/convert/images" title="حوّل صور متعددة إلى ملف PDF واحد">تحويل صور إلى PDF</a>
-        </footer>
+        <!-- شريط التقدّم (مرئي فقط) -->
+        <div class="progress" id="prog" style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;display:none;max-width:720px;width:100%">
+          <div class="bar" id="bar" style="height:100%;width:0;background:linear-gradient(90deg,#ef4444,#f97316)"></div>
+        </div>
+
+        <!-- أزرار الإجراء -->
+        <div class="center" style="margin-top:6px">
+          <button type="submit" class="btn" style="font-size:16px">بدء المعالجة</button>
+        </div>
+
+        <!-- عدّاد الملفات -->
+        <div id="count" class="sub" style="text-align:center;margin-top:6px">لا توجد ملفات محددة</div>
       </form>
     </div>
   </div>
+</section>
+{% endblock %}
 
+{% block extra_js %}
 <script>
   const fileInput = document.getElementById('file');
-  const drop = document.getElementById('drop');
-  const list = document.getElementById('filelist');
-  const countLbl = document.getElementById('countLbl');
-  const form = document.getElementById('form');
-  const prog = document.getElementById('prog');
-  const bar = document.getElementById('bar');
-  const themeLbl = document.getElementById('themeLbl');
-  const toggleTheme = document.getElementById('toggleTheme');
+  const pick      = document.getElementById('pick');
+  const drop      = document.getElementById('drop');
+  const form      = document.getElementById('form');
+  const listEl    = document.getElementById('filelist');
+  const countEl   = document.getElementById('count');
+  const prog      = document.getElementById('prog');
+  const bar       = document.getElementById('bar');
 
-  // theme toggle
-  let dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  themeLbl.textContent = dark ? 'داكن' : 'فاتح';
-  toggleTheme.onclick = () => {
-    dark = !dark;
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-    themeLbl.textContent = dark ? 'داكن' : 'فاتح';
-  };
+  // فتح مُنتقي الملفات
+  pick.onclick = () => fileInput.click();
 
-  drop.onclick = () => fileInput.click();
-
-  const renderList = (files) => {
-    list.innerHTML = '';
+  // تحديث القائمة والعدّاد
+  function renderList(files){
+    listEl.innerHTML = '';
     [...files].forEach(f=>{
       const li = document.createElement('li');
-      li.className='file';
-      li.innerHTML = `<span>${f.name}</span><span class="pill">${(f.size/1048576).toFixed(2)} MB</span>`;
-      list.appendChild(li);
+      li.style.cssText = "display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px dashed #e5e7eb;border-radius:12px;padding:8px 12px;margin-top:8px;color:#374151";
+      li.innerHTML = `<span>${f.name}</span>
+                      <span style="font-size:12px;color:#fff;background:#ef4444;padding:2px 8px;border-radius:999px">
+                        ${(f.size/1048576).toFixed(2)} MB
+                      </span>`;
+      listEl.appendChild(li);
     });
-    countLbl.textContent = files.length ? `${files.length} ملف/ملفات محددة` : 'لم تُحدد ملفات بعد';
-  };
+    countEl.textContent = files.length ? `${files.length} ملف/ملفات محددة` : 'لا توجد ملفات محددة';
+  }
 
-  ;['dragenter','dragover'].forEach(ev=>{
+  // سلوك السحب والإفلات
+  ['dragenter','dragover'].forEach(ev=>{
     drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); });
   });
-  ;['dragleave','drop'].forEach(ev=>{
+  ['dragleave','drop'].forEach(ev=>{
     drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); });
   });
   drop.addEventListener('drop', e=>{
     fileInput.files = e.dataTransfer.files;
     renderList(fileInput.files);
   });
+
+  // عند التغيير عبر المُنتقي
   fileInput.addEventListener('change', ()=> renderList(fileInput.files));
 
-  // progress (client-side visual only)
-  form.addEventListener('submit', ()=>{
+  // إظهار تقدّم بصري بسيط عند الإرسال
+  form.addEventListener('submit', (e)=>{
+    if(!fileInput.files?.length){
+      e.preventDefault();
+      alert('اختر ملف PDF أولاً.');
+      return;
+    }
     prog.style.display='block';
     let pct = 10;
     const id = setInterval(()=>{
       pct = Math.min(95, pct+3);
       bar.style.width = pct + '%';
     }, 120);
-    window.__barInterval = id;
+    // سيكمل إلى 100% بعد ردّ الخادم (تبديل الصفحة/التحميل).
   });
 </script>
-</body>
-</html>
+{% endblock %}

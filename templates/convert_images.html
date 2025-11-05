@@ -1,88 +1,92 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>تحويل صور إلى PDF</title>
+{% extends "base.html" %}
+{% set active = 'img2pdf' %}
 
-  <style>
-    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#0b0d12;color:#e5e7eb}
-    .wrap{max-width:860px;margin:32px auto;padding:0 16px}
-    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:20px}
-    label{display:block;margin:10px 0 6px}
-    input[type="text"],select{
-      width:100%;padding:10px;border-radius:10px;border:1px solid #374151;
-      background:#0b0f18;color:#e5e7eb
-    }
-    input[type="file"]{margin-top:8px}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .btn{
-      background:#4f46e5;border:0;color:#fff;padding:10px 16px;border-radius:10px;
-      cursor:pointer;font-weight:600;text-decoration:none;display:inline-block
-    }
-    .btn:hover{background:#4338ca}
-    .muted{color:#9aa3b2;font-size:14px}
-    a.btn{text-decoration:none}
-  </style>
-</head>
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>صور إلى PDF</h1>
+    <p>ادمج صورك في ملف PDF واحد، أو أنشئ PDF لكل صورة مع ضبط تلقائي على صفحة A4.</p>
+  </div>
+</section>
 
-<body>
-<div class="wrap">
+<section>
+  <div class="container">
+    <div class="card">
+      <form id="imgForm" action="/api/images-to-pdf" method="post" enctype="multipart/form-data" class="center" style="flex-direction:column;gap:12px">
+        <!-- مُدخل الصور الفعلي -->
+        <input id="imgs" type="file" name="images" accept="image/*" multiple hidden />
 
-  <h2>تحويل صور إلى PDF</h2>
-
-  <div class="card">
-    <form action="/api/images-to-pdf" method="post" enctype="multipart/form-data">
-
-      <!-- اختيار الصور -->
-      <label>اختر الصور (JPG/PNG/WebP/...):</label>
-      <input type="file" name="images" accept="image/*" multiple required>
-
-      <!-- اسم PDF -->
-      <div class="row">
-        <div style="flex:1 1 240px">
-          <label>اسم ملف الـPDF الناتج (عند الدمج):</label>
-          <input type="text" name="outfile" value="images.pdf">
+        <!-- زر اختيار الصور -->
+        <div style="text-align:center">
+          <button type="button" id="pickImg" class="btn">اختر الصور</button>
+          <div class="sub">أو اسحبها هنا</div>
         </div>
 
-        <div style="flex:1 1 200px">
-          <label>الترتيب:</label>
-          <select name="order">
+        <!-- منطقة السحب والإفلات -->
+        <div id="imgDrop" class="drop" style="max-width:720px">اسحب الصور هنا</div>
+
+        <!-- خيارات الإخراج -->
+        <div class="row" style="justify-content:center">
+          <input type="text" name="outfile" value="images.pdf" placeholder="اسم ملف PDF (للدمج)">
+          <select name="order" title="ترتيب">
             <option value="name">حسب الاسم (تصاعدي)</option>
             <option value="mtime">حسب تاريخ التعديل</option>
             <option value="as_is">كما تم اختيارها</option>
           </select>
-        </div>
-      </div>
-
-      <!-- PDF لكل صورة -->
-      <div class="row">
-        <label style="display:flex;gap:8px;align-items:center">
-          <input type="checkbox" name="per_file" value="1">
-          إنشاء ملف PDF لكل صورة (بدلاً من دمجها في ملف واحد)
-        </label>
-      </div>
-
-      <!-- ضبط على A4 -->
-      <div class="row">
-        <div>
-          <label style="display:flex;gap:8px;align-items:center">
-            <input type="checkbox" name="fit_a4" value="1">
-            ضبط كل صورة على صفحة A4 (مع هوامش طفيفة)
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="per_file" value="1"> ملف لكل صورة
           </label>
-          <div class="muted">مفيد لو كانت الصور بأبعاد مختلفة.</div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="fit_a4" value="1"> ضبط على A4
+          </label>
         </div>
-      </div>
 
-      <!-- أزرار التحكم -->
-      <div style="margin-top:14px">
-        <button class="btn" type="submit">حوّل الآن</button>
-        <a class="btn" href="/">رجوع للصفحة الرئيسية</a>
-      </div>
+        <!-- إرسال -->
+        <div class="center" style="margin-top:6px">
+          <button type="submit" class="btn" style="font-size:16px">حوِّل الآن</button>
+          <a class="btn" href="/" style="margin-inline-start:10px">رجوع للصفحة الرئيسية</a>
+        </div>
 
-    </form>
+        <!-- عدّاد -->
+        <div id="imgCount" class="sub" style="text-align:center;margin-top:6px">لا توجد صور محددة</div>
+      </form>
+    </div>
   </div>
+</section>
+{% endblock %}
 
-</div>
-</body>
-</html>
+{% block extra_js %}
+<script>
+  const imgs     = document.getElementById('imgs');
+  const pickImg  = document.getElementById('pickImg');
+  const imgDrop  = document.getElementById('imgDrop');
+  const imgForm  = document.getElementById('imgForm');
+  const imgCount = document.getElementById('imgCount');
+
+  pickImg.onclick = ()=> imgs.click();
+
+  ['dragenter','dragover'].forEach(ev=>{
+    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(ev=>{
+    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.remove('drag'); });
+  });
+  imgDrop.addEventListener('drop', e=>{
+    imgs.files = e.dataTransfer.files;
+    updateCount();
+  });
+  imgs.addEventListener('change', updateCount);
+
+  function updateCount(){
+    const n = imgs.files?.length || 0;
+    imgCount.textContent = n ? `${n} صورة/صور محددة` : 'لا توجد صور محددة';
+  }
+
+  imgForm.addEventListener('submit', (e)=>{
+    if(!imgs.files?.length){
+      e.preventDefault();
+      alert('اختر صور أولاً.');
+    }
+  });
+</script>
+{% endblock %}
