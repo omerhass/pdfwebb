@@ -1,20 +1,34 @@
 # -*- coding: utf-8 -*-
 # FastAPI app: PDF -> (TXT + JPG)  +  Images -> PDF
 
-from fastapi import FastAPI, UploadFile, File, Form, Request
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
-from typing import List, Dict, Any
-from pathlib import Path
+from datetime import datetime
 from io import BytesIO
+from pathlib import Path
+from typing import Any, Dict, List
 from zipfile import ZipFile, ZIP_DEFLATED
+
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import (
+    HTMLResponse,
+    FileResponse,
+    JSONResponse,
+    StreamingResponse,
+    PlainTextResponse,
+)
+from fastapi.templating import Jinja2Templates
 from PIL import Image
-import tempfile, shutil, os, time
+import tempfile
+import shutil
+import os
+import time
 
 # ====== App meta ======
 APP_TITLE = "PDF Scanner (TXT + JPG) + Images→PDF"
 app = FastAPI(title=APP_TITLE)
+
+# Templates (اجعل سنة الفوتر ديناميكية بطريقة سليمة)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["current_year"] = lambda: datetime.utcnow().year
 
 # ====== Settings ======
 ENABLE_OCR_AUTO = True          # لا يوجد نص؟ جرّب OCR
@@ -29,10 +43,12 @@ MAX_UPLOAD_MB = 200
 def mb(size_bytes: int) -> float:
     return size_bytes / (1024 * 1024)
 
+
 # ---------- Text (pdfplumber) ----------
 def extract_text_normal(pdf_path: Path) -> str:
     import pdfplumber
-    text_parts = []
+
+    text_parts: List[str] = []
     try:
         with pdfplumber.open(str(pdf_path)) as pdf:
             for p in pdf.pages:
@@ -43,17 +59,18 @@ def extract_text_normal(pdf_path: Path) -> str:
         print("[!] pdfplumber error:", e)
     return ("\n".join(text_parts)).strip()
 
+
 # ---------- OCR (stream page-by-page) ----------
 def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
     try:
         from pdf2image import convert_from_path
         import pytesseract
 
-        kwargs = {}
+        kwargs: Dict[str, Any] = {}
         if POPPLER_PATH:
             kwargs["poppler_path"] = POPPLER_PATH
 
-        text_parts = []
+        text_parts: List[str] = []
         with tempfile.TemporaryDirectory() as tmp:
             paths = convert_from_path(
                 str(pdf_path),
@@ -62,7 +79,7 @@ def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
                 output_folder=tmp,
                 paths_only=True,
                 thread_count=1,
-                **kwargs
+                **kwargs,
             )
 
             if max_pages and len(paths) > max_pages:
@@ -73,14 +90,14 @@ def extract_text_ocr(pdf_path: Path, dpi: int, max_pages: int) -> str:
                 text_parts.append(page_text)
                 try:
                     os.remove(img_path)
-                except:
+                except Exception:
                     pass
 
         return ("\n".join(text_parts)).strip()
-
     except Exception as e:
         print("[!] OCR failed (stream):", e)
         return ""
+
 
 # ---------- Embedded images -> JPG ----------
 def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
@@ -107,38 +124,46 @@ def extract_images_jpg(pdf_path: Path, out_dir: Path, quality: int) -> int:
                 n += 1
     return n
 
+
 # ---- مساعد: تركيب الصورة على صفحة A4 اختيارياً ----
 def to_a4(img: Image.Image, dpi: int = 300, margin_mm: int = 8) -> Image.Image:
-    # صفحة A4 بالبكسل عند 300dpi
     a4_w, a4_h = int(8.27 * dpi), int(11.69 * dpi)
     bg = Image.new("RGB", (a4_w, a4_h), "white")
-    # حواف بالميليمتر
+
     margin_px = int((margin_mm / 25.4) * dpi)
     max_w, max_h = a4_w - 2 * margin_px, a4_h - 2 * margin_px
 
-    # تأكد من RGB
     if img.mode in ("RGBA", "LA", "P"):
         img = img.convert("RGB")
     elif img.mode == "L":
         img = img.convert("RGB")
 
-    # تحجيم يناسب داخل A4
     ratio = min(max_w / img.width, max_h / img.height)
     new_size = (max(1, int(img.width * ratio)), max(1, int(img.height * ratio)))
     img_resized = img.resize(new_size, Image.LANCZOS)
 
-    # لصق في المنتصف
     x = margin_px + (max_w - img_resized.width) // 2
     y = margin_px + (max_h - img_resized.height) // 2
     bg.paste(img_resized, (x, y))
     return bg
 
+
 # ================= Routes =================
+
+# Health check مفيد لـ Render
+@app.get("/healthz", response_class=PlainTextResponse)
+def healthz():
+    return "ok"
+
 
 # ---- Index (رفع PDF) ----
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "title": APP_TITLE})
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "title": APP_TITLE},
+    )
+
 
 # ---- Upload PDFs -> (TXT + JPGs) ----
 @app.post("/upload", response_class=HTMLResponse)
@@ -196,8 +221,9 @@ async def upload(request: Request, files: List[UploadFile] = File(...)):
 
     return templates.TemplateResponse(
         "result_txt_imgs.html",
-        {"request": request, "title": APP_TITLE, "results": results}
+        {"request": request, "title": APP_TITLE, "results": results},
     )
+
 
 # ---- serve temp files ----
 @app.get("/tmp/{tmpid}/out/{path:path}")
@@ -207,13 +233,22 @@ def serve_tmp(tmpid: str, path: str):
     if not str(target).startswith(str(base.resolve())):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     if target.exists() and target.is_file():
-        return FileResponse(str(target), media_type="application/octet-stream", filename=target.name)
+        return FileResponse(
+            str(target),
+            media_type="application/octet-stream",
+            filename=target.name,
+        )
     return JSONResponse({"error": "file not found"}, status_code=404)
+
 
 # ---- UI: Images -> PDF ----
 @app.get("/convert/images", response_class=HTMLResponse)
 def convert_images_page(request: Request):
-    return templates.TemplateResponse("convert_images.html", {"request": request})
+    return templates.TemplateResponse(
+        "convert_images.html",
+        {"request": request, "title": APP_TITLE},
+    )
+
 
 # ---- API: Images -> PDF (دمج أو ملف لكل صورة + خيار A4) ----
 @app.post("/api/images-to-pdf")
@@ -222,21 +257,20 @@ async def images_to_pdf(
     outfile: str = Form("images.pdf"),
     order: str = Form("name"),     # name | mtime | as_is
     per_file: str = Form(None),    # "1" => كل صورة ملف PDF مستقل
-    fit_a4: str = Form(None)       # "1" => ضبط على صفحة A4
+    fit_a4: str = Form(None),      # "1" => ضبط على صفحة A4
 ):
     if not images:
         return JSONResponse({"error": "لم تُرسل أي صور."}, status_code=400)
 
-    # ترتيب الملفات
+    # ترتيب الملفات (اسم/تاريخ/كما أُرسلت)
     if order == "name":
         images.sort(key=lambda f: (f.filename or "").lower())
     elif order == "mtime":
-        # best effort (قد لا تتوفر mtime من المتصفح)
+        # قد لا يتوفر mtime من المتصفح؛ هذا ترتيب تقريبي بدون كسر التنفيذ
         images.sort(key=lambda f: getattr(getattr(f, "spooled", None), "mtime", time.time()))
 
-    # قراءة وتحويل
     pil_list: List[Image.Image] = []
-    single_pdfs = []  # (name, bytes)
+    single_pdfs: List[tuple[str, bytes]] = []
 
     for f in images:
         if not (f.content_type or "").startswith("image/"):
@@ -244,7 +278,7 @@ async def images_to_pdf(
 
         data = await f.read()
         img = Image.open(BytesIO(data))
-        # إصلاح الأنماط
+
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGB")
         elif img.mode == "L":
@@ -254,7 +288,6 @@ async def images_to_pdf(
             img = to_a4(img, dpi=300)
 
         if per_file == "1":
-            # PDF لكل صورة
             buf = BytesIO()
             img.save(buf, format="PDF")
             buf.seek(0)
@@ -263,9 +296,8 @@ async def images_to_pdf(
         else:
             pil_list.append(img)
 
-    # إرجاع حسب الخيار
     if per_file == "1":
-        # ZIP يحتوي على كل ملفات الـPDF
+        # ZIP لكل ملف PDF منفصل
         zip_bytes = BytesIO()
         with ZipFile(zip_bytes, "w", ZIP_DEFLATED) as zf:
             for name, blob in single_pdfs:
@@ -273,14 +305,21 @@ async def images_to_pdf(
         zip_bytes.seek(0)
         headers = {"Content-Disposition": 'attachment; filename="images_pdf.zip"'}
         return StreamingResponse(zip_bytes, media_type="application/zip", headers=headers)
-    else:
-        if not pil_list:
-            return JSONResponse({"error": "لا توجد صور صالحة للدمج."}, status_code=400)
-        pdf_bytes = BytesIO()
-        first, rest = pil_list[0], pil_list[1:]
-        first.save(pdf_bytes, format="PDF", save_all=True, append_images=rest)
-        pdf_bytes.seek(0)
-        if not outfile.lower().endswith(".pdf"):
-            outfile += ".pdf"
-        headers = {"Content-Disposition": f'attachment; filename="{outfile}"'}
-        return StreamingResponse(pdf_bytes, media_type="application/pdf", headers=headers)
+
+    # دمج في PDF واحد
+    if not pil_list:
+        return JSONResponse({"error": "لا توجد صور صالحة للدمج."}, status_code=400)
+
+    pdf_bytes = BytesIO()
+    first, rest = pil_list[0], pil_list[1:]
+    first.save(pdf_bytes, format="PDF", save_all=True, append_images=rest)
+    pdf_bytes.seek(0)
+
+    if not outfile.lower().endswith(".pdf"):
+        outfile += ".pdf"
+    headers = {"Content-Disposition": f'attachment; filename="{outfile}"'}
+    return StreamingResponse(pdf_bytes, media_type="application/pdf", headers=headers)
+
+
+# للتشغيل المحلي:
+# uvicorn app:app --reload
