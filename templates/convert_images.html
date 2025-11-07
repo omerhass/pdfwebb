@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set active = 'img2pdf' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div class="grid">
+      <!-- اليسار: الأداة -->
+      <div class="card">
+        <h1 style="margin:6px 0 6px">صور إلى PDF</h1>
+        <p class="sub" style="margin:0 0 14px">ادمج صورك بصفحات أنيقة للجوال (بدون حواف) أو اختر A4 للطباعة.</p>
+
+        <form id="imgForm" action="/api/images-to-pdf" method="post" enctype="multipart/form-data"
+              style="display:flex;flex-direction:column;gap:14px">
+          <input id="imgs" type="file" name="images" accept="image/*" multiple hidden />
+
+          <div style="text-align:center">
+            <button type="button" id="pickImg" class="btn">اختر الصور</button>
+            <div class="sub">أو اسحبها هنا</div>
+          </div>
+
+          <div id="imgDrop" class="drop">اسحب الصور هنا</div>
+
+          <div class="row">
+            <input type="text" name="outfile" value="images.pdf" placeholder="اسم ملف PDF (للدمج)">
+            <select name="order" title="ترتيب">
+              <option value="name">حسب الاسم (تصاعدي)</option>
+              <option value="mtime">حسب تاريخ التعديل</option>
+              <option value="as_is">كما تم اختيارها</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label class="chip"><input type="checkbox" name="per_file" value="1"> ملف لكل صورة</label>
+            <label class="chip"><input type="checkbox" name="compress" value="1"> ضغط خفيف (حجم أصغر)</label>
+          </div>
+
+          <div class="row">
+            <span class="sub" style="align-self:center">النمط:</span>
+            <label class="chip"><input type="radio" name="style" value="full_bleed" checked> مظهر للجوال (بدون حواف)</label>
+            <label class="chip"><input type="radio" name="style" value="a4_margins"> A4 للطباعة</label>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start">
+            <button type="submit" class="btn">حوّل الآن</button>
+            <a class="btn muted" href="/merge/pdf">انتقال إلى دمج PDF</a>
+          </div>
+
+          <div id="imgCount" class="sub">لا توجد صور محددة</div>
+        </form>
+      </div>
+
+      <!-- اليمين: نصائح -->
+      <div class="card" style="align-self:start">
+        <h3 style="margin:6px 0 12px">نصائح</h3>
+        <ul style="margin:0;padding:0 18px;line-height:1.9">
+          <li>اختر <b>مظهر للجوال</b> لعرض نظيف بدون حواف على الهواتف.</li>
+          <li>للطباعة اختر <b>A4</b> مع هوامش صغيرة.</li>
+          <li>فعّل <b>الضغط</b> لتقليل الحجم مع جودة ممتازة.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const imgs     = document.getElementById('imgs');
+  const pickImg  = document.getElementById('pickImg');
+  const imgDrop  = document.getElementById('imgDrop');
+  const imgForm  = document.getElementById('imgForm');
+  const imgCount = document.getElementById('imgCount');
+
+  pickImg.onclick = ()=> imgs.click();
+
+  ['dragenter','dragover'].forEach(ev=>{
+    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(ev=>{
+    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.remove('drag'); });
+  });
+  imgDrop.addEventListener('drop', e=>{
+    imgs.files = e.dataTransfer.files;
+    updateCount();
+  });
+  imgs.addEventListener('change', updateCount);
+
+  function updateCount(){
+    const n = imgs.files?.length || 0;
+    imgCount.textContent = n ? `${n} صورة/صور محددة` : 'لا توجد صور محددة';
+  }
+
+  imgForm.addEventListener('submit', (e)=>{
+    if(!imgs.files?.length){
+      e.preventDefault();
+      alert('اختر صور أولاً.');
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% set active = 'merge' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container" style="padding-bottom:32px">
+    <div class="card" style="max-width:820px;margin:auto">
+      <h1 style="margin:6px 0 12px">دمج ملفات PDF</h1>
+      <p class="sub" style="margin:0 0 14px">اسحب ملفات PDF إلى الصندوق وسيتم دمجها بالترتيب.</p>
+
+      <form id="mergeForm" action="/api/merge-pdf" method="post" enctype="multipart/form-data"
+            style="display:flex;flex-direction:column;gap:14px">
+        <input id="pdfs" type="file" name="files" accept="application/pdf" multiple hidden />
+
+        <div style="text-align:center">
+          <button type="button" id="pickPdf" class="btn">اختر ملفات PDF</button>
+          <div class="sub">أو اسحبها هنا</div>
+        </div>
+
+        <div id="pdfDrop" class="drop">اسحب ملفات PDF هنا</div>
+
+        <div class="row">
+          <input type="text" name="outfile" value="merged.pdf" placeholder="اسم الملف الناتج">
+          <select name="order" title="الترتيب">
+            <option value="name">حسب الاسم (تصاعدي)</option>
+            <option value="as_is">كما تم اختيارها</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start">
+          <button type="submit" class="btn">دمج الآن</button>
+          <a class="btn muted" href="/">الرجوع للصور → PDF</a>
+        </div>
+
+        <div id="pdfCount" class="sub">لا توجد ملفات محددة</div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const pdfs      = document.getElementById('pdfs');
+  const pickPdf   = document.getElementById('pickPdf');
+  const pdfDrop   = document.getElementById('pdfDrop');
+  const mergeForm = document.getElementById('mergeForm');
+  const pdfCount  = document.getElementById('pdfCount');
+
+  pickPdf.onclick = ()=> pdfs.click();
+
+  ['dragenter','dragover'].forEach(ev=>{
+    pdfDrop.addEventListener(ev, e=>{ e.preventDefault(); pdfDrop.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(ev=>{
+    pdfDrop.addEventListener(ev, e=>{ e.preventDefault(); pdfDrop.classList.remove('drag'); });
+  });
+  pdfDrop.addEventListener('drop', e=>{
+    pdfs.files = e.dataTransfer.files;
+    updateCount();
+  });
+  pdfs.addEventListener('change', updateCount);
+
+  function updateCount(){
+    const n = pdfs.files?.length || 0;
+    pdfCount.textContent = n ? `${n} ملف/ملفات محددة` : 'لا توجد ملفات محددة';
+  }
+
+  mergeForm.addEventListener('submit', (e)=>{
+    if(!pdfs.files?.length){
+      e.preventDefault();
+      alert('اختر ملفات أولاً.');
+    }
+  });
+</script>
+{% endblock %}
