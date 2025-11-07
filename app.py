@@ -6,7 +6,9 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import os, time
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, PlainTextResponse
+from fastapi.responses import (
+    HTMLResponse, JSONResponse, StreamingResponse, PlainTextResponse, Response
+)
 from fastapi.templating import Jinja2Templates
 
 from pypdf import PdfReader, PdfWriter
@@ -26,7 +28,6 @@ MAX_IMAGES = 300
 
 # -------- Helpers --------
 
-# Map EXIF orientation to PIL operations
 _EXIF_ORIENTATION_TAG = next((k for k, v in ExifTags.TAGS.items() if v == "Orientation"), None)
 
 def _auto_orient(img: Image.Image) -> Image.Image:
@@ -45,7 +46,6 @@ def _auto_orient(img: Image.Image) -> Image.Image:
         pass
     return img
 
-
 def _ensure_rgb(img: Image.Image) -> Image.Image:
     if img.mode in ("RGBA", "LA", "P"):
         return img.convert("RGB")
@@ -53,40 +53,28 @@ def _ensure_rgb(img: Image.Image) -> Image.Image:
         return img.convert("RGB")
     return img
 
-
 def _compress_to_jpeg_bytes(img: Image.Image, quality: int = 85) -> bytes:
-    # Convert non-JPEG (e.g., PNG) to progressive JPEG to keep PDFs small on phones
     img = _ensure_rgb(img)
     buf = BytesIO()
     img.save(buf, format="JPEG", quality=quality, optimize=True, progressive=True)
     return buf.getvalue()
 
-
 def _layout_a4_with_margins(margin_mm: float = 8.0):
-    # A4 in points; 1 in = 72 pt; 1 mm = 2.83465 pt
     a4_w_pt, a4_h_pt = img2pdf.mm_to_pt(210), img2pdf.mm_to_pt(297)
     left = right = top = bottom = img2pdf.mm_to_pt(margin_mm)
-
     def _fun(imgwidthpx, imgheightpx, ndpi, metadata):
-        # Fit image inside A4 minus margins, preserve aspect
         page_width, page_height = a4_w_pt, a4_h_pt
         box_w, box_h = page_width - left - right, page_height - top - bottom
         img_aspect = imgwidthpx / float(imgheightpx)
         box_aspect = box_w / float(box_h)
         if img_aspect > box_aspect:
-            # limited by width
-            w = box_w
-            h = w / img_aspect
+            w = box_w; h = w / img_aspect
         else:
-            # limited by height
-            h = box_h
-            w = h * img_aspect
+            h = box_h; w = h * img_aspect
         x = (page_width - w) / 2.0
         y = (page_height - h) / 2.0
         return (page_width, page_height, x, y, w, h)
-
     return _fun
-
 
 # -------- Routes --------
 
@@ -94,50 +82,44 @@ def _layout_a4_with_margins(margin_mm: float = 8.0):
 def healthz():
     return "ok"
 
+# ✅ يعالج فحص HEAD من Render
+@app.head("/")
+def home_head():
+    return Response(status_code=200)
+
+# ✅ يمنع 404 على الأيقونة
+@app.get("/favicon.ico")
+def favicon():
+    return Response(status_code=204)
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse("convert_images.html", {"request": request, "title": "صور إلى PDF"})
 
-
 @app.post("/api/images-to-pdf")
 async def images_to_pdf(
     images: List[UploadFile] = File(...),
     outfile: str = Form("images.pdf"),
-    order: str = Form("name"),    # name | mtime | as_is
-    per_file: str = Form(None),    # "1" => PDF per image (zipped)
-    style: str = Form("full_bleed"),  # full_bleed | a4_margins
-    compress: str = Form(None),    # "1" to lightly recompress non-JPEG sources for smaller PDFs
+    order: str = Form("name"),       # name | mtime | as_is
+    per_file: str = Form(None),      # "1" => PDF per image (zipped)
+    style: str = Form("full_bleed"), # full_bleed | a4_margins
+    compress: str = Form(None),      # "1" to recompress non-JPEG for smaller PDFs
 ):
-    """
-    style="full_bleed": phone-friendly (no borders, page matches image; best look on mobile viewers)
-    style="a4_margins": printable A4 with small margins and aspect-preserving fit
-    compress="1": convert non-JPEG inputs (e.g., PNG) to progressive JPEG to shrink size
-    """
     if not images:
         return JSONResponse({"error": "لم تُرسل أي صور."}, status_code=400)
     if len(images) > MAX_IMAGES:
         return JSONResponse({"error": f"عدد الصور كبير ({len(images)}). الحد الأقصى {MAX_IMAGES}."}, status_code=400)
 
-    # ordering
     if order == "name":
         images.sort(key=lambda f: (f.filename or "").lower())
     elif order == "mtime":
         images.sort(key=lambda f: getattr(getattr(f, "spooled", None), "mtime", time.time()))
 
-    # Build output(s)
     singles: List[Tuple[str, bytes]] = []
-
-    # Prepare img2pdf layout
-    layout_fun = None
-    if style == "a4_margins":
-        layout_fun = _layout_a4_with_margins(8.0)
-
-    # Collect bytes for batch mode
+    layout_fun = _layout_a4_with_margins(8.0) if style == "a4_margins" else None
     pdf_writer_bytes = BytesIO()
 
     if per_file == "1":
-        # Create one PDF per image
         for f in images:
             if not (f.content_type or "").startswith("image/"):
                 return JSONResponse({"error": f"الملف {f.filename} ليس صورة."}, status_code=400)
@@ -148,22 +130,14 @@ async def images_to_pdf(
                     if compress == "1" and (img.format or "").upper() != "JPEG":
                         data_bytes = _compress_to_jpeg_bytes(img)
                     else:
-                        # Use original bytes when possible for best quality
-                        if (img.format or "").upper() == "JPEG":
-                            data_bytes = data
-                        else:
-                            # Convert to JPEG without over-compressing
-                            data_bytes = _compress_to_jpeg_bytes(img)
-                if style == "full_bleed":
-                    pdf_bytes = img2pdf.convert(data_bytes)
-                else:
-                    pdf_bytes = img2pdf.convert(data_bytes, layout_fun=layout_fun)
+                        data_bytes = data if (img.format or "").upper() == "JPEG" else _compress_to_jpeg_bytes(img)
+                pdf_bytes = img2pdf.convert(data_bytes) if style == "full_bleed" \
+                            else img2pdf.convert(data_bytes, layout_fun=layout_fun)
                 name = (f.filename or "image").rsplit(".", 1)[0] + ".pdf"
                 singles.append((name, pdf_bytes))
             except Exception as e:
                 return JSONResponse({"error": f"فشل معالجة {f.filename}: {e}"}, status_code=400)
 
-        # Return ZIP of PDFs
         zip_bytes = BytesIO()
         with ZipFile(zip_bytes, "w", ZIP_DEFLATED) as zf:
             for name, blob in singles:
@@ -172,9 +146,7 @@ async def images_to_pdf(
         return StreamingResponse(zip_bytes, media_type="application/zip",
                                  headers={"Content-Disposition": 'attachment; filename="images_pdf.zip"'})
 
-    # Single merged PDF from all images
     try:
-        # Build a single PDF via img2pdf with multiple input streams
         img_streams: List[bytes] = []
         for f in images:
             if not (f.content_type or "").startswith("image/"):
@@ -185,16 +157,11 @@ async def images_to_pdf(
                 if compress == "1" and (img.format or "").upper() != "JPEG":
                     data_bytes = _compress_to_jpeg_bytes(img)
                 else:
-                    if (img.format or "").upper() == "JPEG":
-                        data_bytes = data
-                    else:
-                        data_bytes = _compress_to_jpeg_bytes(img)
+                    data_bytes = data if (img.format or "").upper() == "JPEG" else _compress_to_jpeg_bytes(img)
             img_streams.append(data_bytes)
 
-        if style == "full_bleed":
-            pdf_data = img2pdf.convert(img_streams)
-        else:
-            pdf_data = img2pdf.convert(img_streams, layout_fun=layout_fun)
+        pdf_data = img2pdf.convert(img_streams) if style == "full_bleed" \
+                   else img2pdf.convert(img_streams, layout_fun=layout_fun)
         pdf_writer_bytes.write(pdf_data)
     except Exception as e:
         return JSONResponse({"error": f"فشل إنشاء PDF: {e}"}, status_code=500)
@@ -209,11 +176,9 @@ async def images_to_pdf(
         headers={"Content-Disposition": f'attachment; filename="{outfile}"'}
     )
 
-
 @app.get("/merge/pdf", response_class=HTMLResponse)
 def merge_pdf_page(request: Request):
     return templates.TemplateResponse("merge_pdf.html", {"request": request, "title": "دمج ملفات PDF"})
-
 
 @app.post("/api/merge-pdf")
 async def merge_pdf(
