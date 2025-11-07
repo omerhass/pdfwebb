@@ -1,7 +1,7 @@
 fastapi
-uvicorn
-python-multipart
-Pillow
+uvicorn[standard]
 jinja2
 pypdf
+pillow
+img2pdf
 gunicorn
