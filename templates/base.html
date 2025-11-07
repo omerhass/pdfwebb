@@ -1,65 +1,112 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{% if title %}{{ title }} — PDF Web{% else %}PDF Web{% endif %}</title>
-  <link rel="icon" href="data:image/svg+xml,
-    %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E
-    %3Crect rx='12' ry='12' width='64' height='64' fill='%23ef4444'/%3E
-    %3Cpath fill='white' d='M18 18h28v6H18zm0 11h28v6H18zm0 11h18v6H18z'/%3E
-    %3C/svg%3E">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title or "PDF Web" }}</title>
+
   <style>
-    :root { --bg:#f6f7fb; --fg:#0f172a; --muted:#6b7280; --brand:#ef4444; --card:#fff; --bd:#e5e7eb; --btn:#ef4444; --btn-h:#dc2626; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,"Segoe UI",Tahoma,Arial}
-    a{color:inherit;text-decoration:none}
-    .container{max-width:980px;margin:0 auto;padding:0 16px}
-    header{background:#fff;border-bottom:1px solid var(--bd)}
-    .nav{display:flex;align-items:center;justify-content:space-between;height:56px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--brand)}
-    .menu{display:flex;gap:18px}
-    .menu a{padding:6px 10px;border-radius:8px;color:#334155}
-    .menu a.active{background:#fee2e2;color:#991b1b;font-weight:700}
-    .hero{padding:38px 0 12px;text-align:center}
-    .hero h1{margin:0 0 8px;font-size:34px;letter-spacing:.2px}
-    .hero p{margin:0;color:var(--muted)}
-    .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(2,6,23,.06)}
-    .center{display:flex;align-items:center;justify-content:center}
-    .btn{background:var(--btn);color:#fff;border:0;border-radius:12px;padding:10px 18px;font-weight:700;cursor:pointer}
-    .btn:hover{background:var(--btn-h)}
-    .drop{border:2px dashed var(--bd);border-radius:16px;padding:22px;text-align:center;color:#64748b;min-height:84px}
-    .drop.drag{border-color:var(--btn);background:#fff4f4;color:#991b1b}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
-    input[type="text"], select{
-      padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:#fff;min-width:180px
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f4f4f7; /* ✅ خلفية فاتحة */
+      color: #222;
+      font-family: 'Tahoma', sans-serif;
     }
-    label.inline{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
-    footer{margin:42px 0 20px;color:#94a3b8;text-align:center;font-size:14px}
+
+    header {
+      background: #ffffff;
+      padding: 14px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      width: 92%;
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px 0;
+    }
+
+    .card {
+      background: #ffffff; /* ✅ صندوق أبيض */
+      padding: 22px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    .btn {
+      background: #d00;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .btn:hover {
+      opacity: 0.85;
+    }
+
+    .drop {
+      border: 2px dashed #bbb;
+      padding: 20px;
+      text-align: center;
+      border-radius: 12px;
+      background: #fafafa;
+      transition: 0.25s;
+    }
+
+    .drop.drag {
+      background: #eee;
+      border-color: #666;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding: 20px;
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+    }
   </style>
-  {% block extra_head %}{% endblock %}
+
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <header>
-    <div class="container nav">
-      <div class="brand">
-        <span>PDF WEB</span>
-        <span class="dot"></span>
-      </div>
-      <nav class="menu">
-        <!-- عنصر واحد فقط: صور → PDF -->
-        <a href="/" class="{% if active=='img2pdf' %}active{% endif %}">صور → PDF</a>
-      </nav>
-    </div>
-  </header>
 
-  {% block content %}{% endblock %}
+<header>
+  PDF WEB — أدوات بسيطة لتحويل ملفاتك
+</header>
 
-  <footer>
-    <div class="container">© {{ current_year() }} — PDF Web • أداة بسيطة لتحويل ملفاتك</div>
-  </footer>
+{% block content %}{% endblock %}
 
-  {% block extra_js %}{% endblock %}
+<footer>
+  © {{ current_year() }} — PDF Web
+</footer>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>
