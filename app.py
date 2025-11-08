@@ -20,14 +20,15 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 APP_TITLE = "PDF Web — أدوات بسيطة (Mobile-Ready)"
 app = FastAPI(title=APP_TITLE)
 
+# ------------ Templates ------------
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["current_year"] = lambda: datetime.utcnow().year
+templates.env.globals["site_name"] = "PDF Web"
 
 MAX_IMAGES = 300
 
-# -------- Helpers --------
-
+# ------------ Helpers ------------
 _EXIF_ORIENTATION_TAG = next((k for k, v in ExifTags.TAGS.items() if v == "Orientation"), None)
 
 def _auto_orient(img: Image.Image) -> Image.Image:
@@ -76,26 +77,59 @@ def _layout_a4_with_margins(margin_mm: float = 8.0):
         return (page_width, page_height, x, y, w, h)
     return _fun
 
-# -------- Routes --------
-
+# ------------ Health / Infra ------------
 @app.get("/healthz", response_class=PlainTextResponse)
 def healthz():
     return "ok"
 
-# ✅ يعالج فحص HEAD من Render
+# HEAD / لفحص Render
 @app.head("/")
 def home_head():
     return Response(status_code=200)
 
-# ✅ يمنع 404 على الأيقونة
+# منع 404 للأيقونة
 @app.get("/favicon.ico")
 def favicon():
     return Response(status_code=204)
 
+# ads.txt لأدسنس (غيّر CLIENT_ID)
+@app.get("/ads.txt", response_class=PlainTextResponse)
+def ads_txt():
+    # استبدل ca-pub-XXXXXXXXXXXXXXX بالمعرّف الخاص بك من AdSense
+    return "google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"
+
+# robots.txt بسيط
+@app.get("/robots.txt", response_class=PlainTextResponse)
+def robots_txt():
+    return "User-agent: *\nAllow: /\nSitemap: /sitemap.txt"
+
+# ------------ Pages ------------
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse("convert_images.html", {"request": request, "title": "صور إلى PDF"})
 
+@app.get("/merge/pdf", response_class=HTMLResponse)
+def merge_pdf_page(request: Request):
+    return templates.TemplateResponse("merge_pdf.html", {"request": request, "title": "دمج ملفات PDF"})
+
+# صفحات قانونية/معلومات
+@app.get("/about", response_class=HTMLResponse)
+def about(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request, "title": "من نحن"})
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request, "title": "سياسة الخصوصية"})
+
+@app.get("/cookies", response_class=HTMLResponse)
+def cookies(request: Request):
+    return templates.TemplateResponse("cookies.html", {"request": request, "title": "سياسة ملفات الارتباط"})
+
+@app.get("/contact", response_class=HTMLResponse)
+def contact(request: Request):
+    return templates.TemplateResponse("contact.html", {"request": request, "title": "اتصل بنا"})
+
+# ------------ APIs ------------
 @app.post("/api/images-to-pdf")
 async def images_to_pdf(
     images: List[UploadFile] = File(...),
@@ -143,8 +177,10 @@ async def images_to_pdf(
             for name, blob in singles:
                 zf.writestr(name, blob)
         zip_bytes.seek(0)
-        return StreamingResponse(zip_bytes, media_type="application/zip",
-                                 headers={"Content-Disposition": 'attachment; filename="images_pdf.zip"'})
+        return StreamingResponse(
+            zip_bytes, media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="images_pdf.zip"'}
+        )
 
     try:
         img_streams: List[bytes] = []
@@ -175,10 +211,6 @@ async def images_to_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{outfile}"'}
     )
-
-@app.get("/merge/pdf", response_class=HTMLResponse)
-def merge_pdf_page(request: Request):
-    return templates.TemplateResponse("merge_pdf.html", {"request": request, "title": "دمج ملفات PDF"})
 
 @app.post("/api/merge-pdf")
 async def merge_pdf(
@@ -217,7 +249,10 @@ async def merge_pdf(
             errors.append(f"{name}: خطأ القراءة ({e})")
 
     if total_pages == 0:
-        return JSONResponse({"error": "لم يتم العثور على صفحات صالحة للدمج.", "details": errors}, status_code=400)
+        return JSONResponse(
+            {"error": "لم يتم العثور على صفحات صالحة للدمج.", "details": errors},
+            status_code=400
+        )
 
     buf = BytesIO()
     writer.write(buf)
@@ -226,5 +261,7 @@ async def merge_pdf(
     if not outfile.lower().endswith(".pdf"):
         outfile += ".pdf"
 
-    return StreamingResponse(buf, media_type="application/pdf",
-                             headers={"Content-Disposition": f'attachment; filename="{outfile}"'})
+    return StreamingResponse(
+        buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{outfile}"'}
+    )
