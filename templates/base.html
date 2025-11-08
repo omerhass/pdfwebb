@@ -61,7 +61,7 @@
       border-bottom:1px solid var(--border);
       backdrop-filter:saturate(180%) blur(8px);
     }
-    .nav{ display:flex;align-items:center;justify-content:space-between; padding:14px 16px; max-width:1100px; margin:auto; }
+    .nav{ display:flex;align-items:center;justify-content:space-between; padding:14px 16px; max-width:1100px; margin:auto; gap:10px; }
     .brand{ display:flex;align-items:center;gap:10px; font-weight:800; font-size:1.1rem; }
     .logo{
       width:28px;height:28px;border-radius:8px;
@@ -70,14 +70,14 @@
     }
 
     /* ===== Tabs ===== */
-    .tabs{display:flex;gap:8px;align-items:center}
+    .tabs{display:flex;gap:8px;align-items:center; flex-wrap:wrap}
     .tab{
       padding:8px 12px;border-radius:10px;text-decoration:none;
       color:var(--ink-dim);border:1px solid transparent;font-weight:500
     }
     .tab.active{ color:var(--ink); background:var(--muted); border-color:var(--border) }
 
-    /* ===== Layout ===== */
+    /* ===== Global Layout & Components (fixes) ===== */
     .container{max-width:1100px;margin:auto;padding:0 16px}
     .hero{padding:32px 0 8px}
     .grid{display:grid;grid-template-columns:1fr;gap:24px;padding-bottom:32px}
@@ -114,29 +114,91 @@
     footer a{ color:var(--ink-dim); text-decoration:none; margin:0 6px; }
     footer a:hover{ color:var(--brand) }
 
-    /* ===== ✅ Narrow Layout (تقليل العرض) ===== */
-    .container{ max-width:880px; }  /* كان 1100 → صار 880 */
+    /* ===== Theme (System + Manual override) ========================== */
+    /* Light (default) variables already in :root */
 
-    @media (min-width:900px){
-      .grid{
-        grid-template-columns:1fr .7fr; /* عمود النصائح أضيق */
+    /* Force LIGHT via class */
+    body.theme-light{
+      --bg:#f6f7fb; --card:#ffffff; --ink:#1f2937; --ink-dim:#6b7280;
+      --brand:#ef4444; --brand2:#ec4899; --ring:rgba(239,68,68,.35);
+      --border:#e5e7eb; --muted:#f9fafb;
+    }
+
+    /* Force DARK via class */
+    body.theme-dark{
+      --bg:#0b0f14; --card:#0f1520; --ink:#e5e7eb; --ink-dim:#9aa4b2;
+      --brand:#f43f5e; --brand2:#8b5cf6; --ring:rgba(99,102,241,.35);
+      --border:#1f2937; --muted:#0c121a;
+    }
+
+    /* Follow system when no override classes exist */
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark){
+        --bg:#0b0f14; --card:#0f1520; --ink:#e5e7eb; --ink-dim:#9aa4b2;
+        --brand:#f43f5e; --brand2:#8b5cf6; --ring:rgba(99,102,241,.35);
+        --border:#1f2937; --muted:#0c121a;
       }
     }
 
-    .card{ padding:16px; border-radius:16px; }
-    .blob{ opacity:.12; }
+    /* Adjust dots backdrop in dark */
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark)::before{
+        background:
+          radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0/22px 22px,
+          radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 11px 11px/22px 22px;
+        -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.16));
+                mask-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.16));
+      }
+    }
+    body.theme-dark::before{
+      background:
+        radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0/22px 22px,
+        radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 11px 11px/22px 22px;
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.16));
+              mask-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.16));
+    }
+
+    /* Header & cards tune in dark */
+    body.theme-dark header,
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark) header{
+        background: rgba(15,21,32,.8);
+        border-bottom-color: var(--border);
+        backdrop-filter: saturate(160%) blur(8px);
+      }
+    }
+    body.theme-dark .card{ background: var(--card); border-color: var(--border); }
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark) .card{ background: var(--card); border-color: var(--border); }
+    }
+
+    /* Theme toggle button */
+    .theme-btn{
+      min-width:40px; height:40px; padding:0 10px;
+      border-radius:10px; font-size:18px; line-height:1;
+      margin-inline-start:8px;
+    }
+    .theme-btn:focus{ outline:none; box-shadow:0 0 0 4px var(--ring); }
+
+    /* Softer blobs in dark */
+    body.theme-dark .blob{ opacity:.10; }
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark) .blob{ opacity:.10; }
+    }
   </style>
 
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
+  <!-- خلفية الفقاعات -->
   <div class="body-blobs">
     <div class="blob p1"></div>
     <div class="blob p2"></div>
     <div class="blob p3"></div>
   </div>
 
+  <!-- الهيدر -->
   <header>
     <div class="nav">
       <div class="brand">
@@ -149,11 +211,17 @@
         <a href="/merge/pdf" class="tab {% if active == 'merge' %}active{% endif %}">دمج PDF</a>
         <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}">ضغط PDF</a>
       </nav>
+
+      <!-- زر تبديل السمة (System ⇄ Light ⇄ Dark) -->
+      <button id="themeToggle" class="btn muted theme-btn" type="button" aria-label="تبديل السمة" title="تبديل السمة">
+        🖥️
+      </button>
     </div>
   </header>
 
   {% block content %}{% endblock %}
 
+  <!-- الفوتر -->
   <footer>
     © {{ current_year() }} — أداة PDF بسيطة ·
     <a href="/about">من نحن</a> ·
@@ -163,5 +231,47 @@
   </footer>
 
   {% block extra_js %}{% endblock %}
+
+  <!-- Theme script: يحفظ التفضيل ويبدّل بين system/light/dark -->
+  <script>
+    (function(){
+      const KEY = 'theme'; // 'light' | 'dark' | 'system'
+      const btn = document.getElementById('themeToggle');
+
+      function applyTheme(mode){
+        document.body.classList.remove('theme-light','theme-dark');
+        if(mode === 'light'){ document.body.classList.add('theme-light'); }
+        else if(mode === 'dark'){ document.body.classList.add('theme-dark'); }
+        // system: لا كلاس → @media تتحكم
+        setButtonIcon(mode);
+      }
+
+      function setButtonIcon(mode){
+        if(!btn) return;
+        if(mode === 'light'){ btn.textContent = '🌞'; btn.title = 'الوضع الفاتح (اضغط للتبديل)'; }
+        else if(mode === 'dark'){ btn.textContent = '🌙'; btn.title = 'الوضع الداكن (اضغط للتبديل)'; }
+        else { btn.textContent = '🖥️'; btn.title = 'اتباع نظام الجهاز (اضغط للتبديل)'; }
+      }
+
+      // load
+      let saved = localStorage.getItem(KEY) || 'system';
+      applyTheme(saved);
+
+      // system change listener
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      media.addEventListener?.('change', () => {
+        const current = localStorage.getItem(KEY) || 'system';
+        if(current === 'system'){ applyTheme('system'); }
+      });
+
+      // toggle: light -> dark -> system -> light ...
+      btn?.addEventListener('click', () => {
+        const current = localStorage.getItem(KEY) || 'system';
+        const next = current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
+        localStorage.setItem(KEY, next);
+        applyTheme(next);
+      });
+    })();
+  </script>
 </body>
 </html>
