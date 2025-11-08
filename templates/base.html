@@ -28,87 +28,105 @@
       overflow-x:hidden;
     }
 
-    /* ✅ الـ Dots Grid */
+    /* ===== Dots Grid ===== */
     body::before{
       content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
       background:
         radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px) 0 0/22px 22px,
         radial-gradient(rgba(0,0,0,.025) 1px, transparent 1px) 11px 11px/22px 22px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05));
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05));
+              mask-image: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05));
     }
 
-    /* ✅ خلفية الـ Blob */
-    .body-blobs{
-      position:fixed; inset:0; z-index:-2; pointer-events:none; overflow:hidden;
-    }
+    /* ===== Blobs background ===== */
+    .body-blobs{ position:fixed; inset:0; z-index:-2; pointer-events:none; overflow:hidden; }
     .blob{
-      position:absolute; filter:blur(60px); opacity:.25; border-radius:50%;
+      position:absolute; border-radius:50%;
+      filter:blur(70px); opacity:.18;
       animation: float 18s ease-in-out infinite alternate;
+      will-change: transform;
     }
-    .blob.p1{ width:420px; height:420px; background:#ec4899; top:-120px; right:10%; }
-    .blob.p2{ width:520px; height:520px; background:#ef4444; bottom:-160px; left:8%; animation-delay:4s;}
-    .blob.p3{ width:380px; height:380px; background:#3b82f6; top:30%; left:60%; opacity:.18; animation-delay:8s;}
+    .blob.p1{ width:min(36vw,420px); height:min(36vw,420px); background:#ec4899; top:-18vh; right:8%; }
+    .blob.p2{ width:min(46vw,520px); height:min(46vw,520px); background:#ef4444; bottom:-22vh; left:6%; animation-delay:4s; }
+    .blob.p3{ width:min(36vw,400px); height:min(36vw,400px); background:#3b82f6; top:35%; left:58%; opacity:.12; animation-delay:8s; }
 
     @keyframes float{
-      to{ transform:translateY(-20px) translateX(12px) scale(1.03); opacity:.28;}
+      to{ transform:translate3d(12px,-20px,0) scale(1.035); opacity:.2; }
     }
 
-    .container{max-width:1100px;margin:auto;padding:0 16px}
-
-    /* ✅ الهيدر */
+    /* ===== Header ===== */
     header{
       position:sticky;top:0;z-index:20;
       background: rgba(255,255,255,.8);
       border-bottom:1px solid var(--border);
       backdrop-filter:saturate(180%) blur(8px);
     }
-    .nav{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:14px 16px;max-width:1100px;margin:auto
-    }
-    .brand{
-      display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1rem
-    }
+    .nav{ display:flex;align-items:center;justify-content:space-between; padding:14px 16px; max-width:1100px; margin:auto; }
+    .brand{ display:flex;align-items:center;gap:10px; font-weight:800; font-size:1.1rem; }
     .logo{
       width:28px;height:28px;border-radius:8px;
       background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 6px 18px rgba(239,68,68,.35)
+      box-shadow:0 6px 18px rgba(239,68,68,.35);
     }
 
-    /* ✅ Tabs */
+    /* ===== Tabs ===== */
     .tabs{display:flex;gap:8px;align-items:center}
     .tab{
       padding:8px 12px;border-radius:10px;text-decoration:none;
       color:var(--ink-dim);border:1px solid transparent;font-weight:500
     }
-    .tab.active{
-      color:var(--ink);background:var(--muted);border-color:var(--border)
+    .tab.active{ color:var(--ink); background:var(--muted); border-color:var(--border) }
+
+    /* ===== Global Layout & Components (fixes) ===== */
+    .container{max-width:1100px;margin:auto;padding:0 16px}
+    .hero{padding:32px 0 8px}
+    .grid{display:grid;grid-template-columns:1fr;gap:24px;padding-bottom:32px}
+    @media (min-width:900px){ .grid{grid-template-columns:1.2fr .8fr} }
+
+    .card{
+      background:#fff;border:1px solid var(--border);border-radius:18px;padding:18px;
+      box-shadow:0 20px 50px rgba(0,0,0,.06)
     }
 
-    /* ✅ Footer */
+    .btn{
+      appearance:none;cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+      padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:600;
+      box-shadow:0 8px 24px rgba(239,68,68,.35);transition:transform .05s ease, box-shadow .2s ease
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.muted{background:#fff;color:var(--ink);border:1px solid var(--border);box-shadow:none}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    input[type="text"], select{
+      border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink);outline:none;min-width:200px
+    }
+    input[type="text"]:focus, select:focus{box-shadow:0 0 0 4px var(--ring)}
+    label.chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:999px;background:#fff}
+    .sub{color:var(--ink-dim);font-size:.92rem}
+    .drop{border:2px dashed #d1d5db;background:#fff;border-radius:14px;padding:24px;text-align:center;transition:.2s}
+    .drop.drag{background:#f3f4f6;border-color:#9ca3af}
+
+    /* ===== Footer ===== */
     footer{
       padding:32px 16px;text-align:center;color:var(--ink-dim);margin-top:40px;
       font-size:.9rem;
     }
-
-    footer a{
-      color:var(--ink-dim);text-decoration:none;margin:0 6px;
-    }
-    footer a:hover{color:var(--brand)}
+    footer a{ color:var(--ink-dim); text-decoration:none; margin:0 6px; }
+    footer a:hover{ color:var(--brand) }
   </style>
 
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-  <!-- ✅ فقاعات الخلفية -->
+  <!-- خلفية الفقاعات -->
   <div class="body-blobs">
     <div class="blob p1"></div>
     <div class="blob p2"></div>
     <div class="blob p3"></div>
   </div>
 
-  <!-- ✅ الهيدر -->
+  <!-- الهيدر -->
   <header>
     <div class="nav">
       <div class="brand">
@@ -124,12 +142,11 @@
     </div>
   </header>
 
-  <!-- ✅ محتوى الصفحة -->
   {% block content %}{% endblock %}
 
-  <!-- ✅ الفوتر -->
+  <!-- الفوتر -->
   <footer>
-    © {{ current_year() }} — أداة PDF بسيطة · 
+    © {{ current_year() }} — أداة PDF بسيطة ·
     <a href="/about">من نحن</a> ·
     <a href="/privacy">سياسة الخصوصية</a> ·
     <a href="/cookies">ملفات الارتباط</a> ·
