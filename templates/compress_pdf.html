@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set active = 'compress' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container" style="padding-bottom:32px">
+    <div class="card" style="max-width:820px;margin:auto">
+      <h1 style="margin:6px 0 12px">ضغط ملفات PDF</h1>
+      <p class="sub" style="margin:0 0 14px">
+        قلّل حجم ملف PDF مع الحفاظ على جودة مناسبة. اختر المستوى المناسب لك.
+      </p>
+
+      <form id="cmpForm" action="/api/compress-pdf" method="post" enctype="multipart/form-data"
+            style="display:flex;flex-direction:column;gap:14px">
+        <input id="pdf" type="file" name="file" accept="application/pdf" hidden />
+
+        <div style="text-align:center">
+          <button type="button" id="pick" class="btn">اختر ملف PDF</button>
+          <div class="sub">أو اسحبه إلى الصندوق أدناه</div>
+        </div>
+
+        <div id="drop" class="drop">اسحب ملف PDF هنا</div>
+
+        <div class="row">
+          <select name="quality" title="الجودة">
+            <option value="medium" selected>متوسط (موصى به)</option>
+            <option value="low">منخفض (أصغر حجم)</option>
+            <option value="high">مرتفع (أفضل جودة)</option>
+          </select>
+
+          <select name="dpi" title="إعادة تحجيم الصور">
+            <option value="">بدون إعادة تحجيم</option>
+            <option value="150" selected>150 DPI</option>
+            <option value="120">120 DPI</option>
+            <option value="96">96 DPI</option>
+            <option value="72">72 DPI (أصغر)</option>
+          </select>
+
+          <label class="chip">
+            <input type="checkbox" name="grayscale" value="1"> تدرّج رمادي (أصغر للحفظ)
+          </label>
+
+          <input type="text" name="outfile" value="compressed.pdf" placeholder="اسم الملف الناتج">
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="submit" class="btn">اضغط الآن</button>
+          <a href="/" class="btn muted">الرجوع للصور → PDF</a>
+        </div>
+
+        <div id="count" class="sub">لا يوجد ملف محدد</div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const f = document.getElementById('pdf');
+  const pick = document.getElementById('pick');
+  const drop = document.getElementById('drop');
+  const form = document.getElementById('cmpForm');
+  const count = document.getElementById('count');
+
+  pick.onclick = ()=> f.click();
+  ['dragenter','dragover'].forEach(ev=>{
+    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(ev=>{
+    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); });
+  });
+  drop.addEventListener('drop', e=>{
+    f.files = e.dataTransfer.files;
+    count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
+  });
+  f.addEventListener('change', ()=>{
+    count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
+  });
+  form.addEventListener('submit', (e)=>{
+    if(!f.files?.length){ e.preventDefault(); alert('اختر ملف PDF أولاً.'); }
+  });
+</script>
+{% endblock %}

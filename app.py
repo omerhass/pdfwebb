@@ -3,7 +3,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import List, Tuple
 from zipfile import ZipFile, ZIP_DEFLATED
-import os, time
+import os, time, subprocess, tempfile, shutil
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import (
@@ -98,19 +98,32 @@ def ads_txt():
     # استبدل ca-pub-XXXXXXXXXXXXXXX بالمعرّف الخاص بك من AdSense
     return "google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"
 
-# robots.txt بسيط
+# robots.txt وسايت ماب بسيط
 @app.get("/robots.txt", response_class=PlainTextResponse)
 def robots_txt():
     return "User-agent: *\nAllow: /\nSitemap: /sitemap.txt"
 
+@app.get("/sitemap.txt", response_class=PlainTextResponse)
+def sitemap_txt():
+    base = ""
+    # Render يحقن PUBLIC_URL كمتغير بيئة أحياناً؛ لو غير متاح اتركه فارغ/نسبي
+    base = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
+    paths = ["/", "/merge/pdf", "/compress/pdf", "/about", "/privacy", "/cookies", "/contact"]
+    return "\n".join([(base + p) if base else p for p in paths])
+
 # ------------ Pages ------------
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("convert_images.html", {"request": request, "title": "صور إلى PDF"})
+    return templates.TemplateResponse("convert_images.html", {"request": request, "title": "صور إلى PDF", "active": "img2pdf"})
 
 @app.get("/merge/pdf", response_class=HTMLResponse)
 def merge_pdf_page(request: Request):
-    return templates.TemplateResponse("merge_pdf.html", {"request": request, "title": "دمج ملفات PDF"})
+    return templates.TemplateResponse("merge_pdf.html", {"request": request, "title": "دمج ملفات PDF", "active": "merge"})
+
+# صفحة ضغط PDF
+@app.get("/compress/pdf", response_class=HTMLResponse)
+def compress_pdf_page(request: Request):
+    return templates.TemplateResponse("compress_pdf.html", {"request": request, "title": "ضغط PDF", "active": "compress"})
 
 # صفحات قانونية/معلومات
 @app.get("/about", response_class=HTMLResponse)
@@ -264,4 +277,85 @@ async def merge_pdf(
     return StreamingResponse(
         buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{outfile}"'}
+    )
+
+# ------------ Compress PDF API (Ghostscript) ------------
+@app.post("/api/compress-pdf")
+async def compress_pdf(
+    file: UploadFile = File(...),
+    outfile: str = Form("compressed.pdf"),
+    level: str = Form("medium"),     # low | medium | high
+    dpi: str = Form("150"),          # "", "150", "120", "96", "72"
+    grayscale: str = Form(None),     # "1" or None
+):
+    if not file:
+        return JSONResponse({"error": "لم يتم رفع أي ملف."}, status_code=400)
+    if not (file.filename or "").lower().endswith(".pdf"):
+        return JSONResponse({"error": "الملف يجب أن يكون PDF."}, status_code=400)
+
+    # تأكد من تواجد Ghostscript
+    if shutil.which("gs") is None:
+        return JSONResponse(
+            {"error": "Ghostscript غير مثبت على الخادم. أضِف 'ghostscript' إلى apt.txt ثم أعد النشر."},
+            status_code=500
+        )
+
+    pdfsettings = {
+        "low": "/screen",     # أصغر حجم
+        "medium": "/ebook",   # موصى به
+        "high": "/printer"    # جودة أعلى
+    }.get(level, "/ebook")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "in.pdf"
+        dst = Path(tmp) / "out.pdf"
+        src.write_bytes(await file.read())
+
+        cmd = [
+            "gs", "-sDEVICE=pdfwrite",
+            "-dCompatibilityLevel=1.4",
+            f"-dPDFSETTINGS={pdfsettings}",
+            "-dNOPAUSE", "-dQUIET", "-dBATCH",
+        ]
+
+        # Downsampling
+        if dpi:
+            try:
+                val = int(dpi)
+                cmd += [
+                    "-dColorImageDownsampleType=/Average",
+                    f"-dColorImageResolution={val}",
+                    "-dGrayImageDownsampleType=/Average",
+                    f"-dGrayImageResolution={val}",
+                    "-dMonoImageDownsampleType=/Subsample",
+                    f"-dMonoImageResolution={val}",
+                ]
+            except Exception:
+                pass
+
+        # تدرّج رمادي اختياري
+        if grayscale == "1":
+            cmd += [
+                "-sColorConversionStrategy=Gray",
+                "-dProcessColorModel=/DeviceGray",
+                "-dConvertCMYKImagesToRGB=true",
+            ]
+
+        cmd += ["-sOutputFile=" + str(dst), str(src)]
+
+        try:
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=180)
+            if not dst.exists():
+                return JSONResponse({"error": f"فشل الضغط: {proc.stderr or proc.stdout}"}, status_code=500)
+            data = dst.read_bytes()
+        except Exception as e:
+            return JSONResponse({"error": f"تعذر تشغيل محرك الضغط: {e}"}, status_code=500)
+
+    if not outfile.lower().endswith(".pdf"):
+        outfile += ".pdf"
+
+    return StreamingResponse(
+        BytesIO(data),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename=\"{outfile}\"'}
     )

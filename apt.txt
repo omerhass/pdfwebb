@@ -2,3 +2,4 @@ poppler-utils
 tesseract-ocr
 libgl1
 libreoffice
+ghostscript
