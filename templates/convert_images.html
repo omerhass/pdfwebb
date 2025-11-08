@@ -1,17 +1,37 @@
 {% extends "base.html" %}
 {% set active = 'img2pdf' %}
 
+{% block extra_css %}
+<style>
+  .perk{
+    padding:10px 12px; border:1px solid var(--border);
+    border-radius:12px; background:#fff;
+  }
+  .qa{
+    border:1px solid var(--border); border-radius:12px;
+    padding:10px 12px; background:#fff; margin-top:10px;
+  }
+  .qa summary{ cursor:pointer; font-weight:600 }
+  .qa[open]{ box-shadow:0 0 0 4px var(--ring) }
+</style>
+{% endblock %}
+
 {% block content %}
+
 <section class="hero">
   <div class="container">
     <div class="grid">
-      <!-- اليسار: الأداة -->
+
+      <!-- ✅ اليسار — أداة تحويل الصور -->
       <div class="card">
         <h1 style="margin:6px 0 6px">صور إلى PDF</h1>
-        <p class="sub" style="margin:0 0 14px">ادمج صورك بصفحات أنيقة للجوال (بدون حواف) أو اختر A4 للطباعة.</p>
+        <p class="sub" style="margin:0 0 14px">
+          ادمج صورك بصفحات أنيقة للجوال أو اختر A4 للطباعة.
+        </p>
 
         <form id="imgForm" action="/api/images-to-pdf" method="post" enctype="multipart/form-data"
               style="display:flex;flex-direction:column;gap:14px">
+
           <input id="imgs" type="file" name="images" accept="image/*" multiple hidden />
 
           <div style="text-align:center">
@@ -24,7 +44,7 @@
           <div class="row">
             <input type="text" name="outfile" value="images.pdf" placeholder="اسم ملف PDF (للدمج)">
             <select name="order" title="ترتيب">
-              <option value="name">حسب الاسم (تصاعدي)</option>
+              <option value="name">حسب الاسم</option>
               <option value="mtime">حسب تاريخ التعديل</option>
               <option value="as_is">كما تم اختيارها</option>
             </select>
@@ -32,37 +52,77 @@
 
           <div class="row">
             <label class="chip"><input type="checkbox" name="per_file" value="1"> ملف لكل صورة</label>
-            <label class="chip"><input type="checkbox" name="compress" value="1"> ضغط خفيف (حجم أصغر)</label>
+            <label class="chip"><input type="checkbox" name="compress" value="1"> ضغط خفيف</label>
           </div>
 
           <div class="row">
             <span class="sub" style="align-self:center">النمط:</span>
-            <label class="chip"><input type="radio" name="style" value="full_bleed" checked> مظهر للجوال (بدون حواف)</label>
+            <label class="chip"><input type="radio" name="style" value="full_bleed" checked> بدون حواف</label>
             <label class="chip"><input type="radio" name="style" value="a4_margins"> A4 للطباعة</label>
           </div>
 
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button type="submit" class="btn">حوّل الآن</button>
-            <a class="btn muted" href="/merge/pdf">انتقال إلى دمج PDF</a>
+            <a class="btn muted" href="/merge/pdf">انتقال لدمج PDF</a>
           </div>
 
           <div id="imgCount" class="sub">لا توجد صور محددة</div>
         </form>
       </div>
 
-      <!-- اليمين: نصائح -->
+      <!-- ✅ اليمين — نصائح -->
       <div class="card" style="align-self:start">
         <h3 style="margin:6px 0 12px">نصائح</h3>
         <ul style="margin:0;padding:0 18px;line-height:1.9">
-          <li>اختر <b>مظهر للجوال</b> لعرض نظيف بدون حواف على الهواتف.</li>
-          <li>للطباعة اختر <b>A4</b> مع هوامش صغيرة.</li>
-          <li>فعّل <b>الضغط</b> لتقليل الحجم مع جودة ممتازة.</li>
+          <li>اختر <b>بدون حواف</b> لنتيجة ممتازة للجوال.</li>
+          <li>لطباعة احترافية استخدم <b>A4</b>.</li>
+          <li>فعّل <b>الضغط الخفيف</b> لتقليل الحجم.</li>
         </ul>
       </div>
+
     </div>
   </div>
 </section>
+
+
+<!-- ✅ قسم المزايا + الأسئلة الشائعة -->
+<section>
+  <div class="container" style="margin-top:18px;display:grid;gap:18px">
+
+    <!-- ✅ مزايا -->
+    <div class="card">
+      <h2 style="margin:0 0 6px">مزايا الموقع</h2>
+      <div class="row" style="margin-top:8px">
+        <div class="perk">✅ واجهة عربية سهلة</div>
+        <div class="perk">✅ مناسب للجوال</div>
+        <div class="perk">✅ معالجة فورية — بدون حفظ</div>
+      </div>
+    </div>
+
+    <!-- ✅ الأسئلة الشائعة -->
+    <div class="card">
+      <h2 style="margin:0 0 6px">الأسئلة الشائعة</h2>
+      <details class="qa">
+        <summary>هل تحفظون ملفاتي؟</summary>
+        <div>لا يتم حفظ أي ملف، تتم المعالجة أثناء الجلسة فقط.</div>
+      </details>
+
+      <details class="qa">
+        <summary>أفضل إعداد للطباعة؟</summary>
+        <div>اختر نمط A4 مع هوامش، وقد تعطّل الضغط للحفاظ على الدقة.</div>
+      </details>
+
+      <details class="qa">
+        <summary>الملف كبير بعد التحويل؟</summary>
+        <div>فعّل خيار الضغط الخفيف، أو استخدم صفحة ضغط PDF.</div>
+      </details>
+    </div>
+
+  </div>
+</section>
+
 {% endblock %}
+
 
 {% block extra_js %}
 <script>
@@ -75,15 +135,21 @@
   pickImg.onclick = ()=> imgs.click();
 
   ['dragenter','dragover'].forEach(ev=>{
-    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.add('drag'); });
+    imgDrop.addEventListener(ev, e=>{
+      e.preventDefault(); imgDrop.classList.add('drag');
+    });
   });
   ['dragleave','drop'].forEach(ev=>{
-    imgDrop.addEventListener(ev, e=>{ e.preventDefault(); imgDrop.classList.remove('drag'); });
+    imgDrop.addEventListener(ev, e=>{
+      e.preventDefault(); imgDrop.classList.remove('drag');
+    });
   });
+
   imgDrop.addEventListener('drop', e=>{
     imgs.files = e.dataTransfer.files;
     updateCount();
   });
+
   imgs.addEventListener('change', updateCount);
 
   function updateCount(){
