@@ -31,22 +31,22 @@
       --shadow:0 18px 45px rgba(0,0,0,.06);
     }
 
-    /* Force DARK via class (صافي وواضح) */
+    /* Force DARK via class */
     body.theme-dark{
-      --bg:#0b1118;          /* الخلفية العامة */
-      --card:#0f1623;        /* بطاقات */
-      --surface:#0b1220;     /* عناصر إدخال */
-      --ink:#e6ebf0;         /* نص أساسي */
-      --ink-dim:#9fb0c3;     /* نص ثانوي */
-      --brand:#f43f5e;       /* أحمر */
-      --brand2:#8b5cf6;      /* بنفسجي وردي */
+      --bg:#0b1118;
+      --card:#0f1623;
+      --surface:#0b1220;
+      --ink:#e6ebf0;
+      --ink-dim:#9fb0c3;
+      --brand:#f43f5e;
+      --brand2:#8b5cf6;
       --ring:rgba(139,92,246,.35);
-      --border:#1b2533;      /* حدود أنعَم */
+      --border:#1b2533;
       --muted:#0b121c;
       --shadow:0 18px 45px rgba(5,10,20,.55);
     }
 
-    /* اتبع النظام عندما لا توجد كلاس */
+    /* اتّباع النظام إذا لا يوجد كلاس */
     @media (prefers-color-scheme: dark){
       body:not(.theme-light):not(.theme-dark){
         --bg:#0b1118; --card:#0f1623; --surface:#0b1220;
@@ -79,7 +79,6 @@
       -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05));
               mask-image: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05));
     }
-    /* Dots in dark */
     @media (prefers-color-scheme: dark){
       body:not(.theme-light):not(.theme-dark)::before{
         background:
@@ -117,39 +116,63 @@
     @media (min-width:900px){ .grid{grid-template-columns:1.2fr .8fr} }
 
     /* Header */
-   /* Header */
-header{
-  position:sticky;top:0;z-index:20;
-  background: rgba(255,255,255,.8);
-  border-bottom:1px solid var(--border);
-  backdrop-filter:saturate(180%) blur(8px);
-}
+    header{
+      position:sticky;top:0;z-index:20;
+      background: rgba(255,255,255,.8);
+      border-bottom:1px solid var(--border);
+      backdrop-filter:saturate(180%) blur(8px);
+    }
+    @media (prefers-color-scheme: dark){
+      body:not(.theme-light):not(.theme-dark) header{
+        background: rgba(15,22,35,.78);
+        border-bottom-color: var(--border);
+      }
+    }
+    body.theme-dark header{
+      background: rgba(15,22,35,.78);
+      border-bottom-color: var(--border);
+    }
 
-/* Dark mode header */
-@media (prefers-color-scheme: dark){
-  body:not(.theme-light):not(.theme-dark) header{
-    background: rgba(15,22,35,.78);
-    border-bottom-color: var(--border);
-  }
-}
+    .nav{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 16px; max-width:1100px; margin:auto; gap:10px;
+    }
+    .brand{ display:flex;align-items:center;gap:10px; font-weight:800; font-size:1.1rem; }
+    .logo{
+      width:28px;height:28px;border-radius:8px;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 6px 18px rgba(239,68,68,.35);
+    }
 
-body.theme-dark header{
-  background: rgba(15,22,35,.78);
-  border-bottom-color: var(--border);
-}
-
-/* Logo + nav */
-.nav{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px; max-width:1100px; margin:auto; gap:10px;
-}
-.brand{ display:flex;align-items:center;gap:10px; font-weight:800; font-size:1.1rem; }
-.logo{
-  width:28px;height:28px;border-radius:8px;
-  background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 6px 18px rgba(239,68,68,.35);
-}
-
+    /* ===== Tabs (PRO STYLE) ===== */
+    .tabs{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .tab{
+      padding:8px 16px;
+      border-radius:12px;
+      text-decoration:none;
+      color:var(--ink-dim);
+      font-weight:600;
+      position:relative;
+      transition:all .25s ease;
+    }
+    .tab:hover{
+      background:rgba(255,255,255,.08);
+      color:var(--ink);
+    }
+    .tab.active{
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 0 14px rgba(239,68,68,.45);
+    }
+    body.theme-light .tab.active{
+      color:#fff;
+      box-shadow:0 0 10px rgba(239,68,68,.25);
+    }
 
     /* Cards & controls */
     .card{
@@ -179,7 +202,10 @@ body.theme-dark header{
     .drop.drag{background:var(--muted);border-color:#9ca3af}
 
     /* Footer */
-    footer{ padding:32px 16px;text-align:center;color:var(--ink-dim);margin-top:40px;font-size:.92rem }
+    footer{
+      padding:32px 16px;text-align:center;color:var(--ink-dim);margin-top:40px;
+      font-size:.92rem;
+    }
     footer a{ color:var(--ink-dim); text-decoration:none; margin:0 6px }
     footer a:hover{ color:var(--brand) }
 
@@ -217,14 +243,14 @@ body.theme-dark header{
         <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}">ضغط PDF</a>
       </nav>
 
-      <!-- زر تبديل السمة (System ⇄ Light ⇄ Dark) -->
-      <button id="themeToggle" class="btn muted theme-btn" type="button" aria-label="تبديل السمة" title="تبديل السمة">🖥️</button>
+      <button id="themeToggle" class="btn muted theme-btn" type="button" aria-label="تبديل السمة" title="تبديل السمة">
+        🖥️
+      </button>
     </div>
   </header>
 
   {% block content %}{% endblock %}
 
-  <!-- الفوتر -->
   <footer>
     © {{ current_year() }} — أداة PDF بسيطة ·
     <a href="/about">من نحن</a> ·
@@ -235,16 +261,16 @@ body.theme-dark header{
 
   {% block extra_js %}{% endblock %}
 
-  <!-- Theme script: يحفظ التفضيل ويبدّل بين system/light/dark -->
   <script>
     (function(){
-      const KEY = 'theme'; // 'light' | 'dark' | 'system'
+      const KEY = 'theme';
       const btn = document.getElementById('themeToggle');
 
       function applyTheme(mode){
         document.body.classList.remove('theme-light','theme-dark');
         if(mode === 'light'){ document.body.classList.add('theme-light'); }
         else if(mode === 'dark'){ document.body.classList.add('theme-dark'); }
+        // system => لا كلاس
         setButtonIcon(mode);
       }
       function setButtonIcon(mode){
@@ -263,10 +289,11 @@ body.theme-dark header{
         if(current === 'system'){ applyTheme('system'); }
       });
 
-      // light -> dark -> system -> light...
       btn?.addEventListener('click', () => {
         const current = localStorage.getItem(KEY) || 'system';
-        const next = current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
+        const next = current === 'light' ? 'dark'
+                     : current === 'dark' ? 'system'
+                     : 'light';
         localStorage.setItem(KEY, next);
         applyTheme(next);
       });
