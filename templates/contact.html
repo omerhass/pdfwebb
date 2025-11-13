@@ -2,11 +2,63 @@
 {% block content %}
 <section class="hero">
   <div class="container">
-    <div class="card" style="max-width:900px;margin:auto">
-      <h1>اتصل بنا</h1>
-      <p>للاستفسارات والاقتراحات والدعم:</p>
-      <p style="font-size:18px;font-weight:bold">📧 ohassan1070@gmail.com</p>
-      <p class="sub">استبدل البريد أعلاه ببريدك الحقيقي.</p>
+    <div class="card" style="max-width:900px;margin:auto; text-align:center;">
+      
+      <h1 style="margin-bottom:10px;">اتصل بنا</h1>
+      <p style="margin-bottom:20px;">للاستفسارات والاقتراحات والدعم الفني:</p>
+
+      <!-- البريد -->
+      <p style="font-size:18px;font-weight:bold;margin-bottom:25px;">
+        📧 ohassan1070@gmail.com
+      </p>
+
+      <!-- أزرار التواصل -->
+      <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+
+        <!-- زر واتساب -->
+        <a href="https://wa.me/905000000000" target="_blank"
+           style="
+             background:#25D366;
+             color:white;
+             padding:12px 18px;
+             border-radius:12px;
+             font-size:16px;
+             display:flex;
+             align-items:center;
+             gap:8px;
+             text-decoration:none;
+             font-weight:600;
+             box-shadow:0 6px 18px rgba(37,211,102,.35);
+             transition:.2s;
+           "
+           onmouseover="this.style.transform='translateY(-3px)'"
+           onmouseout="this.style.transform='translateY(0)'">
+          💬 واتساب
+        </a>
+
+        <!-- زر تليجرام -->
+        <a href="https://t.me/qjmm3" target="_blank"
+           style="
+             background:#229ED9;
+             color:white;
+             padding:12px 18px;
+             border-radius:12px;
+             font-size:16px;
+             display:flex;
+             align-items:center;
+             gap:8px;
+             text-decoration:none;
+             font-weight:600;
+             box-shadow:0 6px 18px rgba(34,158,217,.35);
+             transition:.2s;
+           "
+           onmouseover="this.style.transform='translateY(-3px)'"
+           onmouseout="this.style.transform='translateY(0)'">
+          🚀 تليجرام
+        </a>
+
+      </div>
+
     </div>
   </div>
 </section>
