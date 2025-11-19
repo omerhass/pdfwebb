@@ -10,6 +10,7 @@ from fastapi.responses import (
     HTMLResponse, JSONResponse, StreamingResponse, PlainTextResponse, Response
 )
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles  # ✅ مهم للـ /static
 
 from pypdf import PdfReader, PdfWriter
 from PIL import Image, ImageFile, ExifTags
@@ -123,6 +124,10 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["current_year"] = lambda: datetime.utcnow().year
 templates.env.globals["site_name"] = "PDF Web"
+
+# ------------ Static files (for locales, assets) ✅ ------------
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 MAX_IMAGES = 300
 
@@ -544,5 +549,5 @@ async def compress_pdf(
     return StreamingResponse(
         BytesIO(data),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{outfile}"'},
+        headers={"Content-Disposition": f'attachment; filename=\"{outfile}\"'}
     )
