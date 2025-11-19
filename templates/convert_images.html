@@ -24,46 +24,61 @@
 
       <!-- ✅ اليسار — أداة تحويل الصور -->
       <div class="card">
-        <h1 style="margin:6px 0 6px">صور إلى PDF</h1>
-        <p class="sub" style="margin:0 0 14px">
+        <h1 style="margin:6px 0 6px" data-i18n="img2pdf_title">صور إلى PDF</h1>
+        <p class="sub" style="margin:0 0 14px" data-i18n="img2pdf_subtitle">
           ادمج صورك بصفحات أنيقة للجوال أو اختر A4 للطباعة.
         </p>
 
         <form id="imgForm" action="/api/images-to-pdf" method="post" enctype="multipart/form-data"
               style="display:flex;flex-direction:column;gap:14px">
 
+          <!-- نرسل لغة الواجهة للباكند -->
+          <input type="hidden" name="lang" id="imgLang">
+
           <input id="imgs" type="file" name="images" accept="image/*" multiple hidden />
 
           <div style="text-align:center">
-            <button type="button" id="pickImg" class="btn">اختر الصور</button>
-            <div class="sub">أو اسحبها هنا</div>
+            <button type="button" id="pickImg" class="btn" data-i18n="img2pdf_choose_images">اختر الصور</button>
+            <div class="sub" data-i18n="img2pdf_or_drag_here">أو اسحبها هنا</div>
           </div>
 
-          <div id="imgDrop" class="drop">اسحب الصور هنا</div>
+          <div id="imgDrop" class="drop" data-i18n="img2pdf_drop_here">اسحب الصور هنا</div>
 
           <div class="row">
             <input type="text" name="outfile" value="images.pdf" placeholder="اسم ملف PDF (للدمج)">
             <select name="order" title="ترتيب">
-              <option value="name">حسب الاسم</option>
-              <option value="mtime">حسب تاريخ التعديل</option>
-              <option value="as_is">كما تم اختيارها</option>
+              <option value="name"  data-i18n="img2pdf_order_name">حسب الاسم</option>
+              <option value="mtime" data-i18n="img2pdf_order_mtime">حسب تاريخ التعديل</option>
+              <option value="as_is" data-i18n="img2pdf_order_as_is">كما تم اختيارها</option>
             </select>
           </div>
 
           <div class="row">
-            <label class="chip"><input type="checkbox" name="per_file" value="1"> ملف لكل صورة</label>
-            <label class="chip"><input type="checkbox" name="compress" value="1"> ضغط خفيف</label>
+            <label class="chip">
+              <input type="checkbox" name="per_file" value="1">
+              <span data-i18n="img2pdf_per_file">ملف لكل صورة</span>
+            </label>
+            <label class="chip">
+              <input type="checkbox" name="compress" value="1">
+              <span data-i18n="img2pdf_light_compress">ضغط خفيف</span>
+            </label>
           </div>
 
           <div class="row">
-            <span class="sub" style="align-self:center">النمط:</span>
-            <label class="chip"><input type="radio" name="style" value="full_bleed" checked> بدون حواف</label>
-            <label class="chip"><input type="radio" name="style" value="a4_margins"> A4 للطباعة</label>
+            <span class="sub" style="align-self:center" data-i18n="img2pdf_layout_label">النمط:</span>
+            <label class="chip">
+              <input type="radio" name="style" value="full_bleed" checked>
+              <span data-i18n="img2pdf_style_full_bleed">بدون حواف</span>
+            </label>
+            <label class="chip">
+              <input type="radio" name="style" value="a4_margins">
+              <span data-i18n="img2pdf_style_a4">A4 للطباعة</span>
+            </label>
           </div>
 
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button type="submit" class="btn">حوّل الآن</button>
-            <a class="btn muted" href="/merge/pdf">انتقال لدمج PDF</a>
+            <button type="submit" class="btn" data-i18n="img2pdf_convert_now">حوّل الآن</button>
+            <a class="btn muted" href="/merge/pdf" data-i18n="img2pdf_go_merge">انتقال لدمج PDF</a>
           </div>
 
           <div id="imgCount" class="sub">لا توجد صور محددة</div>
@@ -72,11 +87,11 @@
 
       <!-- ✅ اليمين — نصائح -->
       <div class="card" style="align-self:start">
-        <h3 style="margin:6px 0 12px">نصائح</h3>
+        <h3 style="margin:6px 0 12px" data-i18n="tips_title">نصائح</h3>
         <ul style="margin:0;padding:0 18px;line-height:1.9">
-          <li>اختر <b>بدون حواف</b> لنتيجة ممتازة للجوال.</li>
-          <li>لطباعة احترافية استخدم <b>A4</b>.</li>
-          <li>فعّل <b>الضغط الخفيف</b> لتقليل الحجم.</li>
+          <li data-i18n="tips_item1">اختر <b>بدون حواف</b> لنتيجة ممتازة للجوال.</li>
+          <li data-i18n="tips_item2">لطباعة احترافية استخدم <b>A4</b>.</li>
+          <li data-i18n="tips_item3">فعّل <b>الضغط الخفيف</b> لتقليل الحجم.</li>
         </ul>
       </div>
 
@@ -91,30 +106,31 @@
 
     <!-- ✅ مزايا -->
     <div class="card">
-      <h2 style="margin:0 0 6px">مزايا الموقع</h2>
+      <h2 style="margin:0 0 6px" data-i18n="features_title">مزايا الموقع</h2>
       <div class="row" style="margin-top:8px">
-        <div class="perk">✅ واجهة عربية سهلة</div>
-        <div class="perk">✅ مناسب للجوال</div>
-        <div class="perk">✅ معالجة فورية — بدون حفظ</div>
+        <div class="perk" data-i18n="feature_ui_arabic">✅ واجهة عربية سهلة</div>
+        <div class="perk" data-i18n="feature_mobile_ready">✅ مناسب للجوال</div>
+        <div class="perk" data-i18n="feature_no_storage">✅ معالجة فورية — بدون حفظ</div>
       </div>
     </div>
 
     <!-- ✅ الأسئلة الشائعة -->
     <div class="card">
-      <h2 style="margin:0 0 6px">الأسئلة الشائعة</h2>
+      <h2 style="margin:0 0 6px" data-i18n="faq_title">الأسئلة الشائعة</h2>
+
       <details class="qa">
-        <summary>هل تحفظون ملفاتي؟</summary>
-        <div>لا يتم حفظ أي ملف، تتم المعالجة أثناء الجلسة فقط.</div>
+        <summary data-i18n="faq_q1">هل تحفظون ملفاتي؟</summary>
+        <div data-i18n="faq_a1">لا يتم حفظ أي ملف، تتم المعالجة أثناء الجلسة فقط.</div>
       </details>
 
       <details class="qa">
-        <summary>أفضل إعداد للطباعة؟</summary>
-        <div>اختر نمط A4 مع هوامش، وقد تعطّل الضغط للحفاظ على الدقة.</div>
+        <summary data-i18n="faq_q2">أفضل إعداد للطباعة؟</summary>
+        <div data-i18n="faq_a2">اختر نمط A4 مع هوامش، وقد تعطّل الضغط للحفاظ على الدقة.</div>
       </details>
 
       <details class="qa">
-        <summary>الملف كبير بعد التحويل؟</summary>
-        <div>فعّل خيار الضغط الخفيف، أو استخدم صفحة ضغط PDF.</div>
+        <summary data-i18n="faq_q3">الملف كبير بعد التحويل؟</summary>
+        <div data-i18n="faq_a3">فعّل خيار الضغط الخفيف، أو استخدم صفحة ضغط PDF.</div>
       </details>
     </div>
 
@@ -131,6 +147,13 @@
   const imgDrop  = document.getElementById('imgDrop');
   const imgForm  = document.getElementById('imgForm');
   const imgCount = document.getElementById('imgCount');
+  const imgLang  = document.getElementById('imgLang');
+
+  // حط لغة الواجهة الحالية في الفورم (تروح للباكند)
+  const currentLang = localStorage.getItem('lang') || 'ar';
+  if (imgLang) {
+    imgLang.value = currentLang;
+  }
 
   pickImg.onclick = ()=> imgs.click();
 

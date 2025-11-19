@@ -21,7 +21,6 @@
       --shadow:0 18px 45px rgba(0,0,0,.06);
     }
 
-    /* Force LIGHT via class */
     body.theme-light{
       --bg:#f6f7fb; --card:#ffffff; --surface:#ffffff;
       --ink:#1f2937; --ink-dim:#6b7280;
@@ -31,7 +30,6 @@
       --shadow:0 18px 45px rgba(0,0,0,.06);
     }
 
-    /* Force DARK via class */
     body.theme-dark{
       --bg:#0b1118;
       --card:#0f1623;
@@ -46,7 +44,6 @@
       --shadow:0 18px 45px rgba(5,10,20,.55);
     }
 
-    /* اتّباع النظام إذا لا يوجد كلاس */
     @media (prefers-color-scheme: dark){
       body:not(.theme-light):not(.theme-dark){
         --bg:#0b1118; --card:#0f1623; --surface:#0b1220;
@@ -58,7 +55,6 @@
       }
     }
 
-    /* ===================  BASE  =================== */
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
@@ -70,7 +66,6 @@
       overflow-x:hidden;
     }
 
-    /* Dots Grid */
     body::before{
       content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
       background:
@@ -96,7 +91,6 @@
               mask-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.16));
     }
 
-    /* Blobs */
     .body-blobs{ position:fixed; inset:0; z-index:-2; pointer-events:none; overflow:hidden; }
     .blob{
       position:absolute; border-radius:50%;
@@ -109,13 +103,11 @@
     body.theme-dark .blob{ opacity:.10 }
     @keyframes float{ to{ transform:translate3d(12px,-20px,0) scale(1.035); opacity:.2; } }
 
-    /* Layout */
     .container{max-width:1100px;margin:auto;padding:0 16px}
     .hero{padding:32px 0 8px}
     .grid{display:grid;grid-template-columns:1fr;gap:24px;padding-bottom:32px}
     @media (min-width:900px){ .grid{grid-template-columns:1.2fr .8fr} }
 
-    /* Header */
     header{
       position:sticky;top:0;z-index:20;
       background: rgba(255,255,255,.8);
@@ -144,7 +136,6 @@
       box-shadow:0 6px 18px rgba(239,68,68,.35);
     }
 
-    /* ===== Tabs (PRO STYLE) ===== */
     .tabs{
       display:flex;
       gap:10px;
@@ -174,7 +165,6 @@
       box-shadow:0 0 10px rgba(239,68,68,.25);
     }
 
-    /* Cards & controls */
     .card{
       background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;
       box-shadow:var(--shadow);
@@ -201,7 +191,6 @@
     .drop{border:2px dashed var(--border);background:var(--surface);color:var(--ink-dim);border-radius:14px;padding:24px;text-align:center;transition:.2s}
     .drop.drag{background:var(--muted);border-color:#9ca3af}
 
-    /* Footer */
     footer{
       padding:32px 16px;text-align:center;color:var(--ink-dim);margin-top:40px;
       font-size:.92rem;
@@ -209,27 +198,35 @@
     footer a{ color:var(--ink-dim); text-decoration:none; margin:0 6px }
     footer a:hover{ color:var(--brand) }
 
-    /* Theme toggle button */
     .theme-btn{
       min-width:40px; height:40px; padding:0 10px;
       border-radius:10px; font-size:18px; line-height:1;
       margin-inline-start:8px;
     }
     .theme-btn:focus{ outline:none; box-shadow:0 0 0 4px var(--ring) }
+
+    /* لغة */
+    .lang-select{
+      min-width:80px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:6px 10px;
+      background:var(--surface);
+      color:var(--ink);
+      font-weight:600;
+    }
   </style>
 
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-  <!-- خلفية الفقاعات -->
   <div class="body-blobs">
     <div class="blob p1"></div>
     <div class="blob p2"></div>
     <div class="blob p3"></div>
   </div>
 
-  <!-- الهيدر -->
   <header>
     <div class="nav">
       <div class="brand">
@@ -238,29 +235,41 @@
       </div>
 
       <nav class="tabs">
-        <a href="/" class="tab {% if active == 'img2pdf' %}active{% endif %}">صور → PDF</a>
-        <a href="/merge/pdf" class="tab {% if active == 'merge' %}active{% endif %}">دمج PDF</a>
-        <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}">ضغط PDF</a>
+        <a href="/" class="tab {% if active == 'img2pdf' %}active{% endif %}" data-i18n="img2pdf">صور → PDF</a>
+        <a href="/merge/pdf" class="tab {% if active == 'merge' %}active{% endif %}" data-i18n="merge_pdf">دمج PDF</a>
+        <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}" data-i18n="compress_pdf">ضغط PDF</a>
       </nav>
 
-      <button id="themeToggle" class="btn muted theme-btn" type="button" aria-label="تبديل السمة" title="تبديل السمة">
-        🖥️
-      </button>
+      <div class="row" style="align-items:center;gap:8px">
+        <!-- اختيار اللغة -->
+        <select id="langSwitcher" class="lang-select">
+          <option value="ar">AR</option>
+          <option value="en">EN</option>
+          <option value="tr">TR</option>
+        </select>
+
+        <!-- زر الثيم -->
+        <button id="themeToggle" class="btn muted theme-btn" type="button" aria-label="تبديل السمة" title="تبديل السمة">
+          🖥️
+        </button>
+      </div>
     </div>
   </header>
 
   {% block content %}{% endblock %}
 
   <footer>
-    © {{ current_year() }} — أداة PDF بسيطة ·
-    <a href="/about">من نحن</a> ·
-    <a href="/privacy">سياسة الخصوصية</a> ·
-    <a href="/cookies">ملفات الارتباط</a> ·
-    <a href="/contact">اتصل بنا</a>
+    © {{ current_year() }} —
+    <span data-i18n="simple_pdf_tool">أداة PDF بسيطة</span> ·
+    <a href="/about" data-i18n="about_link">من نحن</a> ·
+    <a href="/privacy" data-i18n="privacy_link">سياسة الخصوصية</a> ·
+    <a href="/cookies" data-i18n="cookies_link">ملفات الارتباط</a> ·
+    <a href="/contact" data-i18n="contact_link">اتصل بنا</a>
   </footer>
 
   {% block extra_js %}{% endblock %}
 
+  <!-- سكربت الثيم -->
   <script>
     (function(){
       const KEY = 'theme';
@@ -270,7 +279,6 @@
         document.body.classList.remove('theme-light','theme-dark');
         if(mode === 'light'){ document.body.classList.add('theme-light'); }
         else if(mode === 'dark'){ document.body.classList.add('theme-dark'); }
-        // system => لا كلاس
         setButtonIcon(mode);
       }
       function setButtonIcon(mode){
@@ -297,6 +305,41 @@
         localStorage.setItem(KEY, next);
         applyTheme(next);
       });
+    })();
+  </script>
+
+  <!-- سكربت الترجمة -->
+  <script>
+    (function(){
+      const LANG_KEY = 'lang';
+      const switcher = document.getElementById('langSwitcher');
+
+      async function loadLang(lang){
+        try{
+          const res = await fetch(`/static/locales/${lang}.json`);
+          if(!res.ok) return;
+          const data = await res.json();
+
+          document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (data[key]) el.textContent = data[key];
+          });
+
+          localStorage.setItem(LANG_KEY, lang);
+          if (switcher) switcher.value = lang;
+        }catch(e){
+          console.error('i18n error', e);
+        }
+      }
+
+      if (switcher){
+        switcher.addEventListener('change', e => {
+          loadLang(e.target.value);
+        });
+      }
+
+      const initialLang = localStorage.getItem(LANG_KEY) || 'ar';
+      loadLang(initialLang);
     })();
   </script>
 </body>

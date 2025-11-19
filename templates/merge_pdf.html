@@ -5,34 +5,42 @@
 <section class="hero">
   <div class="container" style="padding-bottom:32px">
     <div class="card" style="max-width:820px;margin:auto">
-      <h1 style="margin:6px 0 12px">دمج ملفات PDF</h1>
-      <p class="sub" style="margin:0 0 14px">اسحب ملفات PDF إلى الصندوق وسيتم دمجها بالترتيب.</p>
+      <h1 style="margin:6px 0 12px" data-i18n="merge_title">دمج ملفات PDF</h1>
+      <p class="sub" style="margin:0 0 14px" data-i18n="merge_subtitle">
+        اسحب ملفات PDF إلى الصندوق وسيتم دمجها بالترتيب.
+      </p>
 
       <form id="mergeForm" action="/api/merge-pdf" method="post" enctype="multipart/form-data"
             style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- هذه نرسل فيها لغة الواجهة للباكند -->
+        <input type="hidden" name="lang" id="mergeLang">
+
         <input id="pdfs" type="file" name="files" accept="application/pdf" multiple hidden />
 
         <div style="text-align:center">
-          <button type="button" id="pickPdf" class="btn">اختر ملفات PDF</button>
-          <div class="sub">أو اسحبها هنا</div>
+          <button type="button" id="pickPdf" class="btn" data-i18n="merge_choose_files">
+            اختر ملفات PDF
+          </button>
+          <div class="sub" data-i18n="merge_or_drag_here">أو اسحبها هنا</div>
         </div>
 
-        <div id="pdfDrop" class="drop">اسحب ملفات PDF هنا</div>
+        <div id="pdfDrop" class="drop" data-i18n="merge_drop_here">اسحب ملفات PDF هنا</div>
 
         <div class="row">
           <input type="text" name="outfile" value="merged.pdf" placeholder="اسم الملف الناتج">
           <select name="order" title="الترتيب">
-            <option value="name">حسب الاسم (تصاعدي)</option>
-            <option value="as_is">كما تم اختيارها</option>
+            <option value="name" data-i18n="merge_order_name">حسب الاسم (تصاعدي)</option>
+            <option value="as_is" data-i18n="merge_order_as_is">كما تم اختيارها</option>
           </select>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start">
-          <button type="submit" class="btn">دمج الآن</button>
-          <a class="btn muted" href="/">الرجوع للصور → PDF</a>
+          <button type="submit" class="btn" data-i18n="merge_now">دمج الآن</button>
+          <a class="btn muted" href="/" data-i18n="merge_back_to_img2pdf">الرجوع للصور → PDF</a>
         </div>
 
-        <div id="pdfCount" class="sub">لا توجد ملفات محددة</div>
+        <div id="pdfCount" class="sub" data-i18n="merge_no_files">لا توجد ملفات محددة</div>
       </form>
     </div>
   </div>
@@ -46,6 +54,13 @@
   const pdfDrop   = document.getElementById('pdfDrop');
   const mergeForm = document.getElementById('mergeForm');
   const pdfCount  = document.getElementById('pdfCount');
+  const mergeLang = document.getElementById('mergeLang');
+
+  // احفظ لغة الواجهة الحالية داخل الفورم (ترسل للـ backend)
+  const currentLang = localStorage.getItem('lang') || 'ar';
+  if (mergeLang) {
+    mergeLang.value = currentLang;
+  }
 
   pickPdf.onclick = ()=> pdfs.click();
 

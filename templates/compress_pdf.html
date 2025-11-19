@@ -5,47 +5,53 @@
 <section class="hero">
   <div class="container" style="padding-bottom:32px">
     <div class="card" style="max-width:820px;margin:auto">
-      <h1 style="margin:6px 0 12px">ضغط ملفات PDF</h1>
-      <p class="sub" style="margin:0 0 14px">
+      <h1 style="margin:6px 0 12px" data-i18n="compress_title">ضغط ملفات PDF</h1>
+      <p class="sub" style="margin:0 0 14px" data-i18n="compress_subtitle">
         قلّل حجم ملف PDF مع الحفاظ على جودة مناسبة. اختر المستوى المناسب لك.
       </p>
 
       <form id="cmpForm" action="/api/compress-pdf" method="post" enctype="multipart/form-data"
             style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- نرسل لغة الواجهة للباكند -->
+        <input type="hidden" name="lang" id="cmpLang">
+
         <input id="pdf" type="file" name="file" accept="application/pdf" hidden />
 
         <div style="text-align:center">
-          <button type="button" id="pick" class="btn">اختر ملف PDF</button>
-          <div class="sub">أو اسحبه إلى الصندوق أدناه</div>
+          <button type="button" id="pick" class="btn" data-i18n="compress_choose_file">اختر ملف PDF</button>
+          <div class="sub" data-i18n="compress_or_drag">أو اسحبه إلى الصندوق أدناه</div>
         </div>
 
-        <div id="drop" class="drop">اسحب ملف PDF هنا</div>
+        <div id="drop" class="drop" data-i18n="compress_drop_here">اسحب ملف PDF هنا</div>
 
         <div class="row">
-          <select name="quality" title="الجودة">
-            <option value="medium" selected>متوسط (موصى به)</option>
-            <option value="low">منخفض (أصغر حجم)</option>
-            <option value="high">مرتفع (أفضل جودة)</option>
+          <!-- لاحظ: name="level" (توافق مع API) -->
+          <select name="level" title="الجودة">
+            <option value="medium" selected data-i18n="compress_level_medium">متوسط (موصى به)</option>
+            <option value="low" data-i18n="compress_level_low">منخفض (أصغر حجم)</option>
+            <option value="high" data-i18n="compress_level_high">مرتفع (أفضل جودة)</option>
           </select>
 
           <select name="dpi" title="إعادة تحجيم الصور">
-            <option value="">بدون إعادة تحجيم</option>
-            <option value="150" selected>150 DPI</option>
-            <option value="120">120 DPI</option>
-            <option value="96">96 DPI</option>
-            <option value="72">72 DPI (أصغر)</option>
+            <option value="" data-i18n="compress_dpi_none">بدون إعادة تحجيم</option>
+            <option value="150" selected data-i18n="compress_dpi_150">150 DPI</option>
+            <option value="120" data-i18n="compress_dpi_120">120 DPI</option>
+            <option value="96" data-i18n="compress_dpi_96">96 DPI</option>
+            <option value="72" data-i18n="compress_dpi_72">72 DPI (أصغر)</option>
           </select>
 
           <label class="chip">
-            <input type="checkbox" name="grayscale" value="1"> تدرّج رمادي (أصغر للحفظ)
+            <input type="checkbox" name="grayscale" value="1">
+            <span data-i18n="compress_grayscale">تدرّج رمادي (أصغر للحفظ)</span>
           </label>
 
           <input type="text" name="outfile" value="compressed.pdf" placeholder="اسم الملف الناتج">
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="submit" class="btn">اضغط الآن</button>
-          <a href="/" class="btn muted">الرجوع للصور → PDF</a>
+          <button type="submit" class="btn" data-i18n="compress_now">اضغط الآن</button>
+          <a href="/" class="btn muted" data-i18n="compress_back_to_img2pdf">الرجوع للصور → PDF</a>
         </div>
 
         <div id="count" class="sub">لا يوجد ملف محدد</div>
@@ -57,28 +63,42 @@
 
 {% block extra_js %}
 <script>
-  const f = document.getElementById('pdf');
-  const pick = document.getElementById('pick');
-  const drop = document.getElementById('drop');
-  const form = document.getElementById('cmpForm');
+  const f     = document.getElementById('pdf');
+  const pick  = document.getElementById('pick');
+  const drop  = document.getElementById('drop');
+  const form  = document.getElementById('cmpForm');
   const count = document.getElementById('count');
+  const cmpLang = document.getElementById('cmpLang');
+
+  // حط لغة الواجهة الحالية في الفورم
+  const currentLang = localStorage.getItem('lang') || 'ar';
+  if (cmpLang) {
+    cmpLang.value = currentLang;
+  }
 
   pick.onclick = ()=> f.click();
+
   ['dragenter','dragover'].forEach(ev=>{
     drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); });
   });
   ['dragleave','drop'].forEach(ev=>{
     drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); });
   });
+
   drop.addEventListener('drop', e=>{
     f.files = e.dataTransfer.files;
     count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
   });
+
   f.addEventListener('change', ()=>{
     count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
   });
+
   form.addEventListener('submit', (e)=>{
-    if(!f.files?.length){ e.preventDefault(); alert('اختر ملف PDF أولاً.'); }
+    if(!f.files?.length){
+      e.preventDefault();
+      alert('اختر ملف PDF أولاً.');
+    }
   });
 </script>
 {% endblock %}
