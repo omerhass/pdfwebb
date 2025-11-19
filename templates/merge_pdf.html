@@ -13,7 +13,7 @@
       <form id="mergeForm" action="/api/merge-pdf" method="post" enctype="multipart/form-data"
             style="display:flex;flex-direction:column;gap:14px">
 
-        <!-- هذه نرسل فيها لغة الواجهة للباكند -->
+        <!-- نرسل لغة الواجهة للباكند -->
         <input type="hidden" name="lang" id="mergeLang">
 
         <input id="pdfs" type="file" name="files" accept="application/pdf" multiple hidden />
@@ -56,35 +56,88 @@
   const pdfCount  = document.getElementById('pdfCount');
   const mergeLang = document.getElementById('mergeLang');
 
-  // احفظ لغة الواجهة الحالية داخل الفورم (ترسل للـ backend)
-  const currentLang = localStorage.getItem('lang') || 'ar';
-  if (mergeLang) {
-    mergeLang.value = currentLang;
+  function getCurrentLang(){
+    return localStorage.getItem('lang') || 'ar';
   }
+
+  // نصوص عدّاد الملفات
+  const countTexts = {
+    ar: {
+      none: 'لا توجد ملفات محددة',
+      some: n => `${n} ملف/ملفات محددة`
+    },
+    en: {
+      none: 'No files selected',
+      some: n => `${n} file(s) selected`
+    },
+    tr: {
+      none: 'Seçili dosya yok',
+      some: n => `${n} dosya seçildi`
+    }
+  };
+
+  // نصوص رسالة التنبيه
+  const alertTexts = {
+    ar: 'اختر ملفات أولاً.',
+    en: 'Please select PDF files first.',
+    tr: 'Lütfen önce PDF dosyaları seçin.'
+  };
+
+  function syncLangField(){
+    const lang = getCurrentLang();
+    if (mergeLang) mergeLang.value = lang;
+  }
+  syncLangField();
 
   pickPdf.onclick = ()=> pdfs.click();
 
   ['dragenter','dragover'].forEach(ev=>{
-    pdfDrop.addEventListener(ev, e=>{ e.preventDefault(); pdfDrop.classList.add('drag'); });
+    pdfDrop.addEventListener(ev, e=>{
+      e.preventDefault();
+      pdfDrop.classList.add('drag');
+    });
   });
   ['dragleave','drop'].forEach(ev=>{
-    pdfDrop.addEventListener(ev, e=>{ e.preventDefault(); pdfDrop.classList.remove('drag'); });
+    pdfDrop.addEventListener(ev, e=>{
+      e.preventDefault();
+      pdfDrop.classList.remove('drag');
+    });
   });
+
   pdfDrop.addEventListener('drop', e=>{
+    e.preventDefault();
+    pdfDrop.classList.remove('drag');
     pdfs.files = e.dataTransfer.files;
     updateCount();
   });
+
   pdfs.addEventListener('change', updateCount);
 
   function updateCount(){
     const n = pdfs.files?.length || 0;
-    pdfCount.textContent = n ? `${n} ملف/ملفات محددة` : 'لا توجد ملفات محددة';
+    const lang = getCurrentLang();
+    const t = countTexts[lang] || countTexts.ar;
+    pdfCount.textContent = n ? t.some(n) : t.none;
   }
+
+  // تحديث مبدئي حسب اللغة المخزنة
+  updateCount();
 
   mergeForm.addEventListener('submit', (e)=>{
     if(!pdfs.files?.length){
       e.preventDefault();
-      alert('اختر ملفات أولاً.');
+      const lang = getCurrentLang();
+      alert(alertTexts[lang] || alertTexts.ar);
+    }else{
+      syncLangField();
+    }
+  });
+
+  // لو تغيّرت اللغة من الـ select في الهيدر
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'lang'){
+      syncLangField();
+      updateCount();
     }
   });
 </script>

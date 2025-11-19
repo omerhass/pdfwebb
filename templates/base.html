@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ lang or 'ar' }}" dir="{% if lang == 'ar' %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -235,17 +235,17 @@
       </div>
 
       <nav class="tabs">
-        <a href="/" class="tab {% if active == 'img2pdf' %}active{% endif %}" data-i18n="img2pdf">صور → PDF</a>
-        <a href="/merge/pdf" class="tab {% if active == 'merge' %}active{% endif %}" data-i18n="merge_pdf">دمج PDF</a>
-        <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}" data-i18n="compress_pdf">ضغط PDF</a>
+        <a href="/" class="tab {% if active == 'img2pdf' %}active{% endif %}" data-i18n="img2pdf_tab">صور → PDF</a>
+        <a href="/merge/pdf" class="tab {% if active == 'merge' %}active{% endif %}" data-i18n="merge_pdf_tab">دمج PDF</a>
+        <a href="/compress/pdf" class="tab {% if active == 'compress' %}active{% endif %}" data-i18n="compress_pdf_tab">ضغط PDF</a>
       </nav>
 
       <div class="row" style="align-items:center;gap:8px">
         <!-- اختيار اللغة -->
         <select id="langSwitcher" class="lang-select">
-          <option value="ar">AR</option>
-          <option value="en">EN</option>
-          <option value="tr">TR</option>
+          <option value="ar" {% if lang == 'ar' %}selected{% endif %}>AR</option>
+          <option value="en" {% if lang == 'en' %}selected{% endif %}>EN</option>
+          <option value="tr" {% if lang == 'tr' %}selected{% endif %}>TR</option>
         </select>
 
         <!-- زر الثيم -->
@@ -313,6 +313,12 @@
     (function(){
       const LANG_KEY = 'lang';
       const switcher = document.getElementById('langSwitcher');
+      const serverLang = "{{ lang or 'ar' }}";
+
+      function applyDir(lang){
+        document.documentElement.lang = lang;
+        document.documentElement.dir  = (lang === 'ar') ? 'rtl' : 'ltr';
+      }
 
       async function loadLang(lang){
         try{
@@ -327,6 +333,7 @@
 
           localStorage.setItem(LANG_KEY, lang);
           if (switcher) switcher.value = lang;
+          applyDir(lang);
         }catch(e){
           console.error('i18n error', e);
         }
@@ -338,7 +345,8 @@
         });
       }
 
-      const initialLang = localStorage.getItem(LANG_KEY) || 'ar';
+      const storedLang  = localStorage.getItem(LANG_KEY);
+      const initialLang = storedLang || serverLang || 'ar';
       loadLang(initialLang);
     })();
   </script>

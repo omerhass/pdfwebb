@@ -81,7 +81,7 @@
             <a class="btn muted" href="/merge/pdf" data-i18n="img2pdf_go_merge">انتقال لدمج PDF</a>
           </div>
 
-          <div id="imgCount" class="sub">لا توجد صور محددة</div>
+          <div id="imgCount" class="sub" data-i18n="img2pdf_no_images">لا توجد صور محددة</div>
         </form>
       </div>
 
@@ -149,11 +149,40 @@
   const imgCount = document.getElementById('imgCount');
   const imgLang  = document.getElementById('imgLang');
 
-  // حط لغة الواجهة الحالية في الفورم (تروح للباكند)
-  const currentLang = localStorage.getItem('lang') || 'ar';
-  if (imgLang) {
-    imgLang.value = currentLang;
+  // دوال مساعدة للّغة الحالية
+  function getCurrentLang(){
+    return localStorage.getItem('lang') || 'ar';
   }
+
+  // نصوص العدّاد حسب اللغة
+  const countTexts = {
+    ar: {
+      none: 'لا توجد صور محددة',
+      some: n => `${n} صورة/صور محددة`
+    },
+    en: {
+      none: 'No images selected',
+      some: n => `${n} image(s) selected`
+    },
+    tr: {
+      none: 'Seçili resim yok',
+      some: n => `${n} resim seçildi`
+    }
+  };
+
+  // نص رسالة التنبيه
+  const alertTexts = {
+    ar: 'اختر صور أولاً.',
+    en: 'Please select images first.',
+    tr: 'Lütfen önce resim seçin.'
+  };
+
+  // حط لغة الواجهة الحالية في الفورم (تروح للباكند)
+  function syncLangField(){
+    const lang = getCurrentLang();
+    if (imgLang) imgLang.value = lang;
+  }
+  syncLangField();
 
   pickImg.onclick = ()=> imgs.click();
 
@@ -177,13 +206,30 @@
 
   function updateCount(){
     const n = imgs.files?.length || 0;
-    imgCount.textContent = n ? `${n} صورة/صور محددة` : 'لا توجد صور محددة';
+    const lang = getCurrentLang();
+    const t = countTexts[lang] || countTexts.ar;
+    imgCount.textContent = n ? t.some(n) : t.none;
   }
+
+  // استدعاء مرة أولى لتحديث النص حسب اللغة المحفوظة
+  updateCount();
 
   imgForm.addEventListener('submit', (e)=>{
     if(!imgs.files?.length){
       e.preventDefault();
-      alert('اختر صور أولاً.');
+      const lang = getCurrentLang();
+      alert(alertTexts[lang] || alertTexts.ar);
+    } else {
+      // تأكد أن الحقل المخفي محدث قبل الإرسال
+      syncLangField();
+    }
+  });
+
+  // في حال تغيّرت اللغة من الـ select في الهيدر (نفس المفتاح في localStorage)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'lang'){
+      syncLangField();
+      updateCount();
     }
   });
 </script>

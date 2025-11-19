@@ -19,14 +19,16 @@
         <input id="pdf" type="file" name="file" accept="application/pdf" hidden />
 
         <div style="text-align:center">
-          <button type="button" id="pick" class="btn" data-i18n="compress_choose_file">اختر ملف PDF</button>
+          <button type="button" id="pick" class="btn" data-i18n="compress_choose_file">
+            اختر ملف PDF
+          </button>
           <div class="sub" data-i18n="compress_or_drag">أو اسحبه إلى الصندوق أدناه</div>
         </div>
 
         <div id="drop" class="drop" data-i18n="compress_drop_here">اسحب ملف PDF هنا</div>
 
         <div class="row">
-          <!-- لاحظ: name="level" (توافق مع API) -->
+          <!-- مهم: name="level" نفس اسم الحقل في API -->
           <select name="level" title="الجودة">
             <option value="medium" selected data-i18n="compress_level_medium">متوسط (موصى به)</option>
             <option value="low" data-i18n="compress_level_low">منخفض (أصغر حجم)</option>
@@ -63,41 +65,93 @@
 
 {% block extra_js %}
 <script>
-  const f     = document.getElementById('pdf');
-  const pick  = document.getElementById('pick');
-  const drop  = document.getElementById('drop');
-  const form  = document.getElementById('cmpForm');
-  const count = document.getElementById('count');
+  const f       = document.getElementById('pdf');
+  const pick    = document.getElementById('pick');
+  const drop    = document.getElementById('drop');
+  const form    = document.getElementById('cmpForm');
+  const count   = document.getElementById('count');
   const cmpLang = document.getElementById('cmpLang');
 
-  // حط لغة الواجهة الحالية في الفورم
-  const currentLang = localStorage.getItem('lang') || 'ar';
-  if (cmpLang) {
-    cmpLang.value = currentLang;
+  function getCurrentLang(){
+    return localStorage.getItem('lang') || 'ar';
   }
+
+  // نصوص عدّاد الملف
+  const countTexts = {
+    ar: { none: 'لا يوجد ملف محدد' },
+    en: { none: 'No file selected' },
+    tr: { none: 'Seçili dosya yok' }
+  };
+
+  // نصوص رسالة التنبيه
+  const alertTexts = {
+    ar: 'اختر ملف PDF أولاً.',
+    en: 'Please select a PDF file first.',
+    tr: 'Lütfen önce bir PDF dosyası seçin.'
+  };
+
+  function syncLangField(){
+    const lang = getCurrentLang();
+    if (cmpLang) cmpLang.value = lang;
+  }
+  syncLangField();
 
   pick.onclick = ()=> f.click();
 
   ['dragenter','dragover'].forEach(ev=>{
-    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); });
+    drop.addEventListener(ev, e=>{
+      e.preventDefault();
+      drop.classList.add('drag');
+    });
   });
+
   ['dragleave','drop'].forEach(ev=>{
-    drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); });
+    drop.addEventListener(ev, e=>{
+      e.preventDefault();
+      drop.classList.remove('drag');
+    });
   });
 
   drop.addEventListener('drop', e=>{
+    e.preventDefault();
+    drop.classList.remove('drag');
     f.files = e.dataTransfer.files;
-    count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
+    updateCount();
   });
 
-  f.addEventListener('change', ()=>{
-    count.textContent = f.files?.length ? f.files[0].name : 'لا يوجد ملف محدد';
-  });
+  f.addEventListener('change', updateCount);
+
+  function updateCount(){
+    const lang = getCurrentLang();
+    const t = countTexts[lang] || countTexts.ar;
+    const n = f.files?.length || 0;
+    if (!n){
+      count.textContent = t.none;
+    } else {
+      // لو في ملف، نعرض اسمه كما هو
+      count.textContent = f.files[0].name;
+    }
+  }
+
+  // تحديث مبدئي للنص حسب اللغة المخزّنة
+  updateCount();
 
   form.addEventListener('submit', (e)=>{
     if(!f.files?.length){
       e.preventDefault();
-      alert('اختر ملف PDF أولاً.');
+      const lang = getCurrentLang();
+      alert(alertTexts[lang] || alertTexts.ar);
+    } else {
+      syncLangField();
+    }
+  });
+
+  // لو تغيّرت اللغة من الـ select في الهيدر
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'lang'){
+      syncLangField();
+      // لو ما في ملف، نحدّث النص حسب اللغة الجديدة
+      updateCount();
     }
   });
 </script>
