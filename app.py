@@ -126,7 +126,7 @@ templates.env.globals["current_year"] = lambda: datetime.utcnow().year
 templates.env.globals["site_name"] = "PDF Web"
 
 # ------------ Static files (for locales, assets) ✅ ------------
-STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR = Path(__file__).parent / "templates" / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 MAX_IMAGES = 300
