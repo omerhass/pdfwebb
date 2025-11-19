@@ -119,14 +119,19 @@ def msg(key: str, lang: str, **kwargs) -> str:
         return template
 
 
-# ------------ Templates ------------
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+# ------------ Templates & Static ------------
+
+# ✅ جذر المشروع
+BASE_DIR = Path(__file__).resolve().parent
+
+# ✅ مجلد القوالب
+TEMPLATES_DIR = BASE_DIR / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["current_year"] = lambda: datetime.utcnow().year
 templates.env.globals["site_name"] = "PDF Web"
 
-# ------------ Static files (for locales, assets) ✅ ------------
-STATIC_DIR = Path(__file__).parent / "templates" / "static"
+# ✅ مجلد الملفات الثابتة (فيه static/locales/*.json)
+STATIC_DIR = BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 MAX_IMAGES = 300
@@ -222,8 +227,6 @@ def robots_txt():
 
 @app.get("/sitemap.txt", response_class=PlainTextResponse)
 def sitemap_txt():
-    base = ""
-    # Render يحقن PUBLIC_URL كمتغير بيئة أحياناً؛ لو غير متاح اتركه فارغ/نسبي
     base = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
     paths = ["/", "/merge/pdf", "/compress/pdf", "/about", "/privacy", "/cookies", "/contact"]
     return "\n".join([(base + p) if base else p for p in paths])
@@ -248,7 +251,6 @@ def merge_pdf_page(request: Request, lang: str = "ar"):
     )
 
 
-# صفحة ضغط PDF
 @app.get("/compress/pdf", response_class=HTMLResponse)
 def compress_pdf_page(request: Request, lang: str = "ar"):
     lang = normalize_lang(lang)
@@ -258,7 +260,6 @@ def compress_pdf_page(request: Request, lang: str = "ar"):
     )
 
 
-# صفحات قانونية/معلومات
 @app.get("/about", response_class=HTMLResponse)
 def about(request: Request, lang: str = "ar"):
     lang = normalize_lang(lang)
@@ -549,5 +550,5 @@ async def compress_pdf(
     return StreamingResponse(
         BytesIO(data),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename=\"{outfile}\"'}
+        headers={"Content-Disposition": f'attachment; filename="{outfile}"'}
     )
